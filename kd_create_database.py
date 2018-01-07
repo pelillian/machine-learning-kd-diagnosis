@@ -1,6 +1,4 @@
-import os
 import pickle as pkl
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -9,15 +7,16 @@ from sklearn.model_selection import train_test_split
 
 # kd_create_database.py
 
-# This script creates a database from the excel file
+# This script creates a database from the patient data file
 
 # by Peter Lillian
 # -------------------------------------------------------------------------------------------------
 
-# params
+# parameters
 test_set_size = 0.3
+random_state = 222
 
-# studies file
+# patient data file
 data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
 
 del data['peternum']
@@ -27,7 +26,7 @@ del x['label']
 
 y = data['label']
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_set_size)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_set_size, random_state=random_state)
 
 dataset = [x_train, x_test, y_train, y_test]
 
