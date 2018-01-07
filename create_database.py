@@ -1,7 +1,3 @@
-import pickle as pkl
-import pandas as pd
-from sklearn.model_selection import train_test_split
-
 # -------------------------------------------------------------------------------------------------
 # MACHINE LEARNING FOR KAWASAKI DISEASE DIAGNOSIS
 
@@ -12,9 +8,13 @@ from sklearn.model_selection import train_test_split
 # by Peter Lillian
 # -------------------------------------------------------------------------------------------------
 
+import pickle as pkl
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
 # parameters
 test_set_size = 0.3
-random_state = 222
+random_state = 222 # set this to None for random train/test split
 
 # patient data file
 data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
