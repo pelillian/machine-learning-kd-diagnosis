@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-# MACHINE LEARNING FOR KAWASAKI DISEASE DIAGNOSIS
+# DEEP LEARNING FOR KAWASAKI DISEASE DIAGNOSIS
 
 # model.py
 
@@ -12,9 +12,11 @@ import tensorflow as tf # change this to gpu
 import numpy as np
 
 # input
-def model(x, num_hidden, num_classes):
-	fc1 = tf.contrib.layers.fully_connected(x, num_hidden[0])
-	fc2 = tf.contrib.layers.fully_connected(fc1, num_hidden[1])
-	fc3 = tf.contrib.layers.fully_connected(fc2, num_hidden[2])
-	fc4 = tf.contrib.layers.fully_connected(fc3, num_classes, activation_fn=None)
-	return fc4
+def kd_model(x, hidden_dim, classes):
+	fc = x
+	for layer_size in hidden_dim:
+		fc = tf.contrib.layers.fully_connected(fc, layer_size)
+
+	fc = tf.contrib.layers.fully_connected(fc, classes, activation_fn=None)
+	
+	return fc

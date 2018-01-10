@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------
-# MACHINE LEARNING FOR KAWASAKI DISEASE DIAGNOSIS
+# DEEP LEARNING FOR KAWASAKI DISEASE DIAGNOSIS
 
 # kd_create_database.py
 
