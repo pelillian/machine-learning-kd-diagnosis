@@ -20,6 +20,10 @@ random_state = 222 # set this to None for random train/test split
 data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
 
 del data['peternum']
+del data['signESR']
+del data['signCRP']
+del data['signALT']
+del data['signGGT']
 
 x = data.copy()
 del x['label']
