@@ -17,16 +17,20 @@ import model
 
 # training parameters
 learning_rate = 0.001
-training_epochs = 100
+epochs = 100
 batch_size = 100
-display_step = 1
+display_step = 5
 
 # net parameters
-input_dim = 14
-hidden_dim = [256, 64, 16]
+input_dim = 20
+# hidden_dim = [256, 64, 16]
+hidden_dim = [14, 8]
 classes = 2
 dropout = 0.25 # probability to drop a unit
 
+# load data
+x_train, x_test, y_train, y_test = load_data.load()
+print(y_train.shape)
 # inputs
 x = tf.placeholder("float", [None, input_dim])
 y = tf.placeholder("float", [None, classes])
@@ -38,3 +42,4 @@ cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=output, lab
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 init = tf.global_variables_initializer()
+
