@@ -43,3 +43,35 @@ opt = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 init = tf.global_variables_initializer()
 
+# run session: train
+with tf.Session() as sess:
+	# initialize vars
+	sess.run(init)
+
+	# start training
+	for epoch in range(epochs):
+		avg_cost = 0.
+		num_batches = len(x_train)//batch_size
+		batches_array_x = np.array_split(x_train, num_batches)
+		batches_array_y = np.array_split(y_train, num_batches)
+
+		for i in range(num_batches):
+			x_batch, y_batch = batches_array_x[i], batches_array_y[i]
+
+			batch_cost = sess.run([opt, cost], feed_dict={x: x_batch, y: y_batch})[1]
+
+			avg_cost += batch_cost
+
+		avg_cost /= num_batches
+
+		if epoch % display_step == 0:
+			print('Epoch', epoch + 1, ' cost', avg_cost)
+
+	# Run quick test
+	end_pred = tf.equal(tf.argmax(output, 1), tf.argmax(y, 1))
+
+	accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
+
+	test_accuracy = accuracy.eval({x: x_test, y: y_test})
+
+	print("Accuracy", test_accuracy)
