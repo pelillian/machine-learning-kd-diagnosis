@@ -10,6 +10,7 @@
 
 import pickle as pkl
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 
 # parameters
@@ -18,6 +19,8 @@ random_state = 222 # set this to None for random train/test split
 
 # patient data file
 data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
+
+data.replace('NA', np.nan)
 
 del data['peternum']
 del data['signESR']
