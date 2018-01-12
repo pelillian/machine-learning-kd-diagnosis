@@ -17,16 +17,15 @@ import model
 
 # training parameters
 learning_rate = 0.001
-epochs = 100
+epochs = 200
 batch_size = 100
 display_step = 5
 
 # net parameters
 input_dim = 20
-# hidden_dim = [256, 64, 16]
-hidden_dim = [14, 8]
+hidden_dim = [40, 30, 20, 14, 9, 5]
 classes = 2
-dropout = 0.25 # probability to drop a unit
+dropout = 0.95 # probability to keep a unit
 
 # load data
 x_train, x_test, y_train, y_test = load_data.load()
@@ -34,9 +33,10 @@ print(y_train.shape)
 # inputs
 x = tf.placeholder("float", [None, input_dim])
 y = tf.placeholder("float", [None, classes])
+keep_prob = tf.placeholder(tf.float32)
 
 # model
-output = model.kd_model(x, hidden_dim, classes)
+output = model.kd_model(x, hidden_dim, classes, keep_prob)
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=output, labels=y))
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -58,7 +58,7 @@ with tf.Session() as sess:
 		for i in range(num_batches):
 			x_batch, y_batch = batches_array_x[i], batches_array_y[i]
 
-			batch_cost = sess.run([opt, cost], feed_dict={x: x_batch, y: y_batch})[1]
+			batch_cost = sess.run([opt, cost], feed_dict={x: x_batch, y: y_batch, keep_prob: dropout})[1]
 
 			avg_cost += batch_cost
 
@@ -72,6 +72,6 @@ with tf.Session() as sess:
 
 	accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
 
-	test_accuracy = accuracy.eval({x: x_test, y: y_test})
+	test_accuracy = accuracy.eval({x: x_test, y: y_test, keep_prob: 1})
 
 	print("Accuracy", test_accuracy)
