@@ -3,7 +3,7 @@
 
 # train_model.py
 
-# This script trains the model
+# This script sets up and trains the model
 
 # by Peter Lillian
 # -------------------------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ dropout = 0.95 # probability to keep a unit
 
 # load data
 x_train, x_test, y_train, y_test = load_data.load()
-print(y_train.shape)
+
 # inputs
 x = tf.placeholder("float", [None, input_dim])
 y = tf.placeholder("float", [None, classes])

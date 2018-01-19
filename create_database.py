@@ -20,6 +20,7 @@ random_state = 222 # set this to None for random train/test split
 # patient data file
 data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
 
+# replace missing data with nan so that we can handle it easier later
 data.replace('NA', np.nan)
 
 del data['peternum']
