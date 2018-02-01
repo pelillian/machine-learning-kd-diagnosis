@@ -20,7 +20,7 @@ def fill_nan(data):
 
 # load the dataset from pkl file
 def load():
-	f = open('data/kd_dataset.pkl','rb')
+	f = open('../data/kd_dataset.pkl','rb')
 	x_train, x_test, y_train, y_test = pkl.load(f)
 	f.close()
 	
