@@ -5,7 +5,7 @@
 
 # Functions for loading data
 
-# by Peter Lillian
+# by Peter Lillian (hi peter)
 # -------------------------------------------------------------------------------------------------
 
 import pickle as pkl
@@ -19,13 +19,16 @@ def fill_nan(data):
 	return data
 
 # load the dataset from pkl file
-def load():
+
+# TODO: move this to root
+def load(one_hot=True):
 	f = open('../data/kd_dataset.pkl','rb')
 	x_train, x_test, y_train, y_test = pkl.load(f)
 	f.close()
 	
 	# one-hot encode y
-	y_train = np.eye(np.max(y_train) + 1)[y_train]
-	y_test = np.eye(np.max(y_test) + 1)[y_test]
+	if (one_hot):
+		y_train = np.eye(np.max(y_train) + 1)[y_train]
+		y_test = np.eye(np.max(y_test) + 1)[y_test]
 
 	return fill_nan(x_train), fill_nan(x_test), fill_nan(y_train), fill_nan(y_test)

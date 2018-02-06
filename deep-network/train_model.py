@@ -8,11 +8,14 @@
 # by Peter Lillian
 # -------------------------------------------------------------------------------------------------
 
+# Imports
+import sys
+sys.path.append('../') # Make parent folder visible
 import tensorflow as tf # change this to gpu
 import matplotlib.pyplot as plt
 import numpy as np
 
-import load_data
+from preprocessing import load_data
 import model
 
 # training parameters

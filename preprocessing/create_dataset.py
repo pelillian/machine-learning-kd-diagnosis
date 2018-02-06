@@ -18,7 +18,7 @@ test_set_size = 0.3
 random_state = 222 # set this to None for random train/test split
 
 # patient data file
-data = pd.read_excel(open('data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
+data = pd.read_excel(open('../data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 'rb'), sheetname='Peter set 1- training set')
 
 # replace missing data with nan so that we can handle it easier later
 data.replace('NA', np.nan)
@@ -38,7 +38,7 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_set_siz
 
 dataset = [x_train, x_test, y_train, y_test]
 
-f = open('data/kd_dataset.pkl','wb')
+f = open('../data/kd_dataset.pkl','wb')
 pkl.dump(dataset, f)
 f.close()
 
