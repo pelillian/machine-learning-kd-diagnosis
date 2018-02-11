@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from preprocessing import load_data
+from sklearn import preprocessing
 import model
 
 # training parameters
@@ -32,6 +33,11 @@ dropout = 0.95 # probability to keep a unit
 
 # load data
 x_train, x_test, y_train, y_test = load_data.load()
+
+# preprocessing
+scaler = preprocessing.StandardScaler().fit(x_train)
+x_train = scaler.transform(x_train)
+x_test = scaler.transform(x_test)
 
 # inputs
 x = tf.placeholder("float", [None, input_dim])
