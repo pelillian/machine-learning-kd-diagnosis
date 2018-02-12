@@ -32,7 +32,7 @@ classes = 2
 dropout = 0.95 # probability to keep a unit
 
 # load data
-x_train, x_test, y_train, y_test = load_data.load()
+x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
 # preprocessing
 scaler = preprocessing.StandardScaler().fit(x_train)
