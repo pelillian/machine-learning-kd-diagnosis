@@ -11,7 +11,6 @@
 import pickle as pkl
 import numpy as np
 import numpy.ma as ma
-from fancyimpute import KNN
 
 # Fill NaN entries in data matrix (i.e. perform imputation)
 	# Mode = 'mean': fill NaN entries using mean of that feature
@@ -21,10 +20,10 @@ def fill_nan(data, mode='mean', k=5):
 	if mode == 'mean':
 		data = np.where(np.isnan(data), ma.array(data, mask=np.isnan(data)).mean(axis=0), data)
 	
-	# KNN imputation
-	elif mode == 'knn':
-		if np.isnan(data).any().any(): # If has NaN entries, then impute
-			data = KNN(k=k).complete(data)
+	# KNN imputation - TODO: implement this without fancyimpute
+	# elif mode == 'knn':
+	# 	if np.isnan(data).any().any(): # If has NaN entries, then impute
+	# 		data = KNN(k=k).complete(data)
 
 	return data
 
