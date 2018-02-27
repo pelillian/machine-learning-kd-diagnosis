@@ -3,14 +3,15 @@
 This project uses Kawasaki Disease (KD) patient data to train a model that predicts whether a given patient is a febrile control or has the disease.
 
 ### Methods Tested:
-* Deep neural network
+* Deep Neural Network
 * XGBoost
+* K-Nearest Neighbors (KNN)
+* Support Vector Machine (SVM)
 
 ### Dependencies:
 * Python 3.x
 * Tensorflow
-* Keras
+* XGBoost
 * Scikit-learn
 * Matplotlib
 * Numpy/Scipy
-* [fancyimpute](https://pypi.python.org/pypi/fancyimpute)
