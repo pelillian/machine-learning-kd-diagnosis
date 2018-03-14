@@ -15,7 +15,7 @@ import tensorflow as tf # change this to gpu
 import matplotlib.pyplot as plt
 import numpy as np
 
-from preprocessing import load_data
+from preprocess import load_data
 from sklearn import preprocessing
 import model
 
