@@ -5,7 +5,7 @@
 
 # Functions for loading data
 
-# by Peter Lillian (hi peter)
+# Peter Lillian & Lucas Hu
 # -------------------------------------------------------------------------------------------------
 
 import pickle as pkl
@@ -35,7 +35,10 @@ def fill_nan(data, mode='mean', k=5):
 	# fill_mode: how to fill NaN values (see fill_nan())
 	# k: how many nearest neighbors to look at for KNN-based imputation
 def load(one_hot=True, fill_mode='mean', k=5):
-	f = open('../data/kd_dataset.pkl','rb')
+	try:
+		f = open('../data/kd_dataset.pkl','rb')
+	except:
+		f = open('data/kd_dataset.pkl','rb')
 	x_train, x_test, y_train, y_test = pkl.load(f)
 	f.close()
 	
