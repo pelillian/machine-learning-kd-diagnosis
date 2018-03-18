@@ -100,15 +100,16 @@ class DeepKDModel:
 		x_test = self.scaler.transform(x_test)
 
 		# set up tf
-		end_pred = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
-		accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
+		y_pred = tf.argmax(self.model, 1)
+		# end_pred = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
+		# accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
 
 		with tf.Session() as sess:
 			saver = tf.train.import_meta_graph('./deepnet/deep_kd_model.meta')
 			saver.restore(sess, tf.train.latest_checkpoint('./deepnet/'))
-			test_accuracy = accuracy.eval({self.x: x_test, self.y: y_test, self.keep_prob: 1})
+			test_results = y_pred.eval({self.x: x_test, self.y: y_test, self.keep_prob: 1})
 
-			if self.verbose:
-				print("Accuracy", test_accuracy)
+			# if self.verbose:
+			# 	print("Accuracy", test_accuracy)
 
-			return test_accuracy
+			return test_results
