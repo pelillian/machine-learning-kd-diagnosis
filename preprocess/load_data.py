@@ -49,7 +49,9 @@ def fill_nan(data, mode='mean', k=5):
 		# Documentation: https://github.com/iskandr/fancyimpute/blob/master/fancyimpute/knn.py
 		# Assumes inputs are already standardized
 	elif mode == 'knn':
+
 		from fancyimpute import KNN
+		
 		if np.isnan(data).any().any(): # If has NaN entries, then impute
 			data = KNN(k=k).complete(data)
 
