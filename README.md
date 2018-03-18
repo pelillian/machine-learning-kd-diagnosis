@@ -15,3 +15,4 @@ This project uses Kawasaki Disease (KD) patient data to train a model that predi
 * Scikit-learn
 * Matplotlib
 * Numpy/Scipy
+* [Fancyimpute](https://github.com/iskandr/fancyimpute)
