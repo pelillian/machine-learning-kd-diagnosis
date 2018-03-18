@@ -20,10 +20,16 @@ def compute_stats(y_pred, y_test):
 	return np.unique(contigview, return_counts=True)[1]
 
 def explain_stats(stats):
-	print("FC Classified as FC: " + str(stats[0]))
-	print("FC Classified as KD: " + str(stats[1]))
-	print("KD Classified as FC: " + str(stats[2]))
-	print("KD Classified as KD: " + str(stats[3]))
+	fc_total = stats[0] + stats[1]
+	kd_total = stats[2] + stats[3]
+	fc_as_fc = (stats[0] / fc_total) * 100
+	print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)")
+	fc_as_kd = (stats[1] / fc_total) * 100
+	print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)")
+	kd_as_fc = (stats[2] / kd_total) * 100
+	print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
+	kd_as_kd = (stats[3] / kd_total) * 100
+	print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
 
 
 # load data
