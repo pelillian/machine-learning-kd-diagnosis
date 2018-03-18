@@ -141,3 +141,5 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+deepnet/deep_kd_model.meta
+deepnet/deep_kd_model.index
