@@ -8,10 +8,6 @@
 # Peter Lillian
 # -------------------------------------------------------------------------------------------------
 
-# Imports
-import sys
-# sys.path.append('../') # Make parent folder visible
-
 # hide tf warnings
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
@@ -22,7 +18,8 @@ import numpy as np
 from sklearn import preprocessing
 
 class DeepKDModel:
-	def __init__(self, learning_rate=0.001, epochs=200, batch_size=100, display_step=10, verbose=False):
+	def __init__(self, learning_rate=0.001, epochs=200, batch_size=100, display_step=10,
+			verbose=False):
 		self.learning_rate = learning_rate
 		self.epochs = epochs
 		self.batch_size = batch_size
@@ -39,10 +36,15 @@ class DeepKDModel:
 		
 		return fc
 
+	def train_test(self, x_train, x_test, y_train, y_test):
+		self.train(x_train, y_train)
+		return self.test(x_test, y_test)
+
 	def train(self, x_train, y_train):
 		# net parameters
-		input_dim = 20
-		hidden_dim = [40, 30, 20, 14, 9, 5]
+		input_dim = len(x_train[1, :])
+		hidden_dim = [input_dim * 2, int(input_dim * 1.5), input_dim, int(input_dim * 0.7),
+			input_dim // 2, input_dim // 4]
 		classes = 2
 		dropout = 0.95 # probability to keep a unit
 
@@ -58,7 +60,9 @@ class DeepKDModel:
 		# model
 		self.model = self.kd_model(self.x, hidden_dim, classes, self.keep_prob)
 
-		cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.model, labels=self.y))
+		cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+			logits=self.model, labels=self.y
+		))
 		opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(cost)
 
 		init = tf.global_variables_initializer()
@@ -82,7 +86,9 @@ class DeepKDModel:
 				for i in range(num_batches):
 					x_batch, y_batch = batches_array_x[i], batches_array_y[i]
 
-					batch_cost = sess.run([opt, cost], feed_dict={self.x: x_batch, self.y: y_batch, self.keep_prob: dropout})[1]
+					batch_cost = sess.run([opt, cost], feed_dict={
+						self.x: x_batch, self.y: y_batch, self.keep_prob: dropout
+					})[1]
 
 					avg_cost += batch_cost
 					global_step += 1
