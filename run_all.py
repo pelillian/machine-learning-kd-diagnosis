@@ -14,6 +14,7 @@ from preprocess import load_data
 # load data
 x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
+# test deepmodel
 deep = DeepKDModel()
 deep.train(x_train, y_train)
 print(deep.test(x_test, y_test))
