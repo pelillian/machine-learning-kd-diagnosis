@@ -11,10 +11,14 @@
 import numpy as np
 
 from deepnet.deep_model import DeepKDModel
+from xgbst.xgboost_model import XGBoostKDModel
 from preprocess import load_data
 
 def compute_stats(y_pred, y_test):
-	y_results = np.column_stack((y_test[:, 1], y_pred))
+	if y_test.ndim > 1:
+		y_results = np.column_stack((y_test[:, 1], y_pred))
+	else:
+		y_results = np.column_stack((y_test, y_pred))
 	y_arr = np.dtype((np.void, y_results.dtype.itemsize * y_results.shape[1]))
 	contigview = np.ascontiguousarray(y_results).view(y_arr)
 	return np.unique(contigview, return_counts=True)[1]
@@ -36,9 +40,18 @@ def explain_stats(stats):
 x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
 # test deepmodel
-deep = DeepKDModel()
-deep.train(x_train, y_train)
-deep_y_pred = deep.test(x_test, y_test)
+print("Deep Model")
+deep_model = DeepKDModel()
+deep_y_pred = deep_model.train_test(x_train, x_test, y_train, y_test)
 deep_stats = compute_stats(deep_y_pred, y_test)
 
 explain_stats(deep_stats)
+
+x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean')
+
+print("XGBoost Model")
+xgb_model = XGBoostKDModel()
+xgb_y_pred = xgb_model.train_test(x_train, x_test, y_train, y_test)
+xgb_stats = compute_stats(xgb_y_pred, y_test)
+
+explain_stats(xgb_stats)
