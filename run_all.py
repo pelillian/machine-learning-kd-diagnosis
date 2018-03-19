@@ -10,9 +10,24 @@
 
 import numpy as np
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+
 from deepnet.deep_model import DeepKDModel
 from xgbst.xgboost_model import XGBoostKDModel
+
 from preprocess import load_data
+
+class ScikitModel:
+	def __init__(self, model, verbose=False):
+		self.model = model
+		self.verbose = verbose
+
+	def train_test(self, x_train, x_test, y_train, y_test):
+		self.model.fit(x_train, y_train)
+		y_pred = self.model.predict(x_test)
+		return y_pred
 
 def compute_stats(y_pred, y_test):
 	if y_test.ndim > 1:
@@ -35,23 +50,29 @@ def explain_stats(stats):
 	kd_as_kd = (stats[3] / kd_total) * 100
 	print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
 
+def test_model(model, x_train, x_test, y_train, y_test):
+	y_pred = model.train_test(x_train, x_test, y_train, y_test)
+	stats = compute_stats(y_pred, y_test)
+
+	explain_stats(stats)
+
 
 # load data
 x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
-# test deepmodel
 print("Deep Model")
-deep_model = DeepKDModel()
-deep_y_pred = deep_model.train_test(x_train, x_test, y_train, y_test)
-deep_stats = compute_stats(deep_y_pred, y_test)
-
-explain_stats(deep_stats)
+test_model(DeepKDModel(), x_train, x_test, y_train, y_test)
 
 x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean')
 
 print("XGBoost Model")
-xgb_model = XGBoostKDModel()
-xgb_y_pred = xgb_model.train_test(x_train, x_test, y_train, y_test)
-xgb_stats = compute_stats(xgb_y_pred, y_test)
+test_model(XGBoostKDModel(), x_train, x_test, y_train, y_test)
 
-explain_stats(xgb_stats)
+print("Logistic Regression")
+test_model(ScikitModel(LogisticRegression()), x_train, x_test, y_train, y_test)
+
+print("Support Vector Classification")
+test_model(ScikitModel(SVC()), x_train, x_test, y_train, y_test)
+
+print("Random Forest")
+test_model(ScikitModel(RandomForestClassifier()), x_train, x_test, y_train, y_test)
