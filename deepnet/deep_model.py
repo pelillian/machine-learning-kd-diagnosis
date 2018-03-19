@@ -19,11 +19,13 @@ from sklearn import preprocessing
 
 class DeepKDModel:
 	def __init__(self, learning_rate=0.001, epochs=200, batch_size=100, display_step=10,
-			verbose=False):
+			classes=2, dropout=0.75, verbose=False):
 		self.learning_rate = learning_rate
 		self.epochs = epochs
 		self.batch_size = batch_size
 		self.display_step = display_step
+		self.classes = classes
+		self.dropout = dropout # probability to keep a unit
 		self.verbose = verbose
 
 	def kd_model(self, x, hidden_dim, classes, keep_prob):
@@ -45,8 +47,6 @@ class DeepKDModel:
 		input_dim = len(x_train[1, :])
 		hidden_dim = [input_dim * 2, int(input_dim * 1.5), input_dim, int(input_dim * 0.7),
 			input_dim // 2, input_dim // 4]
-		classes = 2
-		dropout = 0.95 # probability to keep a unit
 
 		# preprocessing
 		self.scaler = preprocessing.StandardScaler().fit(x_train)
@@ -54,11 +54,11 @@ class DeepKDModel:
 
 		# inputs
 		self.x = tf.placeholder("float", [None, input_dim])
-		self.y = tf.placeholder("float", [None, classes])
+		self.y = tf.placeholder("float", [None, self.classes])
 		self.keep_prob = tf.placeholder(tf.float32)
 
 		# model
-		self.model = self.kd_model(self.x, hidden_dim, classes, self.keep_prob)
+		self.model = self.kd_model(self.x, hidden_dim, self.classes, self.keep_prob)
 
 		cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
 			logits=self.model, labels=self.y
@@ -87,7 +87,7 @@ class DeepKDModel:
 					x_batch, y_batch = batches_array_x[i], batches_array_y[i]
 
 					batch_cost = sess.run([opt, cost], feed_dict={
-						self.x: x_batch, self.y: y_batch, self.keep_prob: dropout
+						self.x: x_batch, self.y: y_batch, self.keep_prob: self.dropout
 					})[1]
 
 					avg_cost += batch_cost
