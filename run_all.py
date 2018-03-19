@@ -57,12 +57,13 @@ def test_model(model, x_train, x_test, y_train, y_test):
 	explain_stats(stats)
 
 
-# load data
+# load data one hot
 x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
 print("Deep Model")
 test_model(DeepKDModel(), x_train, x_test, y_train, y_test)
 
+# load data not one hot
 x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean')
 
 print("XGBoost Model")

@@ -18,7 +18,7 @@ import numpy as np
 from sklearn import preprocessing
 
 class DeepKDModel:
-	def __init__(self, learning_rate=0.001, epochs=200, batch_size=100, display_step=10,
+	def __init__(self, learning_rate=0.001, epochs=400, batch_size=100, display_step=10,
 			classes=2, dropout=0.75, verbose=False):
 		self.learning_rate = learning_rate
 		self.epochs = epochs
