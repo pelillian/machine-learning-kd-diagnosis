@@ -12,7 +12,13 @@ import numpy as np
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+
 
 from deepnet.deep_model import DeepKDModel
 from xgbst.xgboost_model import XGBoostKDModel
@@ -60,6 +66,7 @@ def test_model(model, x_train, x_test, y_train, y_test):
 # load data one hot
 x_train, x_test, y_train, y_test = load_data.load(one_hot=True, fill_mode='mean')
 
+print("Our Models:")
 print("Deep Model")
 test_model(DeepKDModel(), x_train, x_test, y_train, y_test)
 
@@ -69,11 +76,29 @@ x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean
 print("XGBoost Model")
 test_model(XGBoostKDModel(), x_train, x_test, y_train, y_test)
 
+print("")
+print("Scikit Models:")
+
 print("Logistic Regression")
 test_model(ScikitModel(LogisticRegression()), x_train, x_test, y_train, y_test)
 
 print("Support Vector Classification")
 test_model(ScikitModel(SVC()), x_train, x_test, y_train, y_test)
 
+print("Gaussian Process Classifier")
+test_model(ScikitModel(GaussianProcessClassifier(1.0 * RBF(1.0))), x_train, x_test, y_train, y_test)
+
 print("Random Forest")
 test_model(ScikitModel(RandomForestClassifier()), x_train, x_test, y_train, y_test)
+
+print("AdaBoost Classifier")
+test_model(ScikitModel(AdaBoostClassifier()), x_train, x_test, y_train, y_test)
+
+print("Multi-layer Perceptron")
+test_model(ScikitModel(MLPClassifier(max_iter=400)), x_train, x_test, y_train, y_test)
+
+print("K Nearest Neighbors")
+test_model(ScikitModel(KNeighborsClassifier(4)), x_train, x_test, y_train, y_test)
+
+print("Gaussian Native Bayes")
+test_model(ScikitModel(GaussianNB()), x_train, x_test, y_train, y_test)
