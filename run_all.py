@@ -35,6 +35,7 @@ class ScikitModel:
 		y_pred = self.model.predict(x_test)
 		return y_pred
 
+# Explain TN, FP, FN, TP
 def compute_stats(y_pred, y_test):
 	if y_test.ndim > 1:
 		y_results = np.column_stack((y_test[:, 1], y_pred))
@@ -44,6 +45,7 @@ def compute_stats(y_pred, y_test):
 	contigview = np.ascontiguousarray(y_results).view(y_arr)
 	return np.unique(contigview, return_counts=True)[1]
 
+# Explain TN, FP, FN, TP
 def explain_stats(stats):
 	fc_total = stats[0] + stats[1]
 	kd_total = stats[2] + stats[3]
@@ -56,10 +58,10 @@ def explain_stats(stats):
 	kd_as_kd = (stats[3] / kd_total) * 100
 	print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
 
+# Train and evaluate model, print out results
 def test_model(model, x_train, x_test, y_train, y_test):
 	y_pred = model.train_test(x_train, x_test, y_train, y_test)
 	stats = compute_stats(y_pred, y_test)
-
 	explain_stats(stats)
 
 
