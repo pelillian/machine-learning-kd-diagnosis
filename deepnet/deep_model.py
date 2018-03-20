@@ -18,7 +18,9 @@ import numpy as np
 from sklearn import preprocessing
 
 class DeepKDModel:
-	def __init__(self, learning_rate=0.001, epochs=400, batch_size=100, display_step=10,
+	def __init__(self, 
+			num_hidden_layers=3, num_nodes_initial=50, num_nodes_scaling_factor=0.5,
+			learning_rate=0.001, epochs=400, batch_size=100, display_step=10,
 			classes=2, dropout=0.75, verbose=False):
 		self.learning_rate = learning_rate
 		self.epochs = epochs
@@ -27,6 +29,15 @@ class DeepKDModel:
 		self.classes = classes
 		self.dropout = dropout # probability to keep a unit
 		self.verbose = verbose
+
+		# Architecture hyperparameters
+			# Number of layers
+			# Num. nodes in 1st hidden layer
+			# Scaling factor (downscale number of nodes in each hidden layer)
+		self.num_hidden_layers = num_hidden_layers
+		self.num_nodes_initial = num_nodes_initial
+		self.num_nodes_scaling_factor = num_nodes_scaling_factor
+
 
 	def kd_model(self, x, hidden_dim, classes, keep_prob):
 		fc = x
@@ -45,8 +56,14 @@ class DeepKDModel:
 	def train(self, x_train, y_train):
 		# net parameters
 		input_dim = len(x_train[1, :])
-		hidden_dim = [input_dim * 2, int(input_dim * 1.5), input_dim, int(input_dim * 0.7),
-			input_dim // 2, input_dim // 4]
+
+		# List of values representing the num. nodes in each hidden layer
+			# Num. nodes decreases by num_nodes_scaling_factor in each successive layer
+		hidden_dim = [int(self.num_nodes_initial * (self.num_nodes_scaling_factor**i)) \
+			for i in range(self.num_hidden_layers)]
+
+		if self.verbose:
+			print('Initialized MLP with hidden layer sizes: ', hidden_dim)
 
 		# preprocessing
 		self.scaler = preprocessing.StandardScaler().fit(x_train)
@@ -119,3 +136,7 @@ class DeepKDModel:
 			# 	print("Accuracy", test_accuracy)
 
 			return test_results
+
+
+	# def optimize_hyperparameters(self, x_test, y_test):
+
