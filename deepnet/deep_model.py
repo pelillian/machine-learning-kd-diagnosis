@@ -5,7 +5,7 @@
 
 # This script defines and trains the deep model
 
-# Peter Lillian
+# Peter Lillian, Lucas Hu
 # -------------------------------------------------------------------------------------------------
 
 # hide tf warnings
@@ -57,6 +57,10 @@ class DeepKDModel:
 
 	def train(self, x_train, y_train):
 		tf.reset_default_graph()
+
+		# onehot
+		y_train = y_train.astype(int)
+		y_train = np.eye(np.max(y_train) + 1)[y_train]
 
 		# net parameters
 		input_dim = len(x_train[1, :])
@@ -125,6 +129,9 @@ class DeepKDModel:
 	def test(self, x_test, y_test):
 		# preprocessing
 		x_test = self.scaler.transform(x_test)
+		# onehot
+		y_test = y_test.astype(int)
+		y_test = np.eye(np.max(y_test) + 1)[y_test]
 
 		# set up tf
 		y_pred = tf.argmax(self.model, axis=1)
