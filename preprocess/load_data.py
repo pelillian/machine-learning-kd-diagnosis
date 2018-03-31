@@ -63,7 +63,7 @@ def fill_nan(data, mode='mean', k=5):
 	# one_hot: True = labels are one-hot vectors ([Not KD, KD]), False = labels are values (1 = KD)
 	# fill_mode: how to fill NaN values (see fill_nan())
 	# k: how many nearest neighbors to look at for KNN-based imputation
-def load(one_hot=True, fill_mode='mean', standardize=True, k=5):
+def load(one_hot=False, fill_mode='mean', standardize=True, k=5):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset.pkl','rb')
