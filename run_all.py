@@ -90,8 +90,14 @@ print("Scikit Models:")
 print("Logistic Regression")
 test_model(ScikitModel(LogisticRegression()), x, y)
 
-print("Support Vector Classification")
-test_model(ScikitModel(SVC()), x, y)
+print("Support Vector Classification: Linear Kernel")
+test_model(ScikitModel(SVC(kernel='linear')), x_train, x_test, y_train, y_test)
+
+print("Support Vector Classification: RBF Kernel")
+test_model(ScikitModel(SVC(kernel='rbf')), x_train, x_test, y_train, y_test)
+
+print("Support Vector Classification: Polynomial Kernel")
+test_model(ScikitModel(SVC(kernel='poly')), x_train, x_test, y_train, y_test)
 
 print("Gaussian Process Classifier")
 test_model(ScikitModel(GaussianProcessClassifier(1.0 * RBF(1.0))), x, y)
