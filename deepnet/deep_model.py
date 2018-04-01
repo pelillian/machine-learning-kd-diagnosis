@@ -194,7 +194,8 @@ class DeepKDModel:
 
 
 	# Optimize model hyperparameters based on fbeta_score, save optimal parameters in member vars
-	def optimize_hyperparameters(self, x, y, num_calls=10, random_state=None, beta=1, k=5):
+		# This represents one OUTER CV-training loop
+	def optimize_hyperparameters(self, x_train, y_train, num_calls=10, random_state=None, beta=1, k=5):
 		# Optimization objective for skopt: returns negated fbeta score
 		# Input: tuple of hyperparameters
 		def skopt_objective(params):
@@ -212,7 +213,7 @@ class DeepKDModel:
 			self.dropout = dropout # probability to keep a unit
 
 			# Return negated fbeta_score (minimize negative fbeta --> maximize fbeta)
-			return -self.kfold_fbeta(x, y, k=k, beta=beta)
+			return -self.kfold_fbeta(x_train, y_train, k=k, beta=beta)
 
 		# Define hyperparameter space
 		hyperparam_space = [
@@ -264,10 +265,10 @@ class DeepKDModel:
 		self.batch_size = opt_batch_size
 		self.dropout = opt_dropout
 
-		# # Train 1 last time using optimal hyperparams
-		# print()
-		# print('Re-training with optimal hyperparameters...')
-		# self.train(x_train, y_train)
+		# Train 1 last time using all data and optimal parameters
+		print()
+		print('Re-training with optimal hyperparameters...')
+		self.train(x_train, y_train)
 
 
 

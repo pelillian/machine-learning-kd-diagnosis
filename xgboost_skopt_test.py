@@ -8,7 +8,7 @@ x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
 model = XGBoostKDModel(verbose=True)
-model.optimize_hyperparameters(x, y, num_calls=100, random_state=90007)
+model.optimize_hyperparameters(x, y, num_calls=10, random_state=90007)
 
 # Explain TN, FP, FN, TP
 def compute_stats(y_pred, y_test):

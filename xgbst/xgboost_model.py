@@ -95,7 +95,8 @@ class XGBoostKDModel:
 
 
 	# Optimize model hyperparameters based on fbeta_score, save optimal parameters in member vars
-	def optimize_hyperparameters(self, x, y, beta=1, num_calls=100, random_state=None, k=5):
+		# This represents one OUTER CV-training loop
+	def optimize_hyperparameters(self, x_train, y_train, beta=1, num_calls=100, random_state=None, k=5):
 
 		# Hyperparameters
 			# Eta (learning rate): 0.01-0.2
@@ -119,7 +120,7 @@ class XGBoostKDModel:
 			self.param['colsample_bytree'] = colsample_bytree
 
 			# Return negated fbeta_score (minimize negative fbeta --> maximize fbeta)
-			return -self.kfold_fbeta(x, y, k=k, beta=beta)
+			return -self.kfold_fbeta(x_train, y_train, k=k, beta=beta)
 
 		# Define hyperparameter space
 		hyperparam_space = [
@@ -166,10 +167,12 @@ class XGBoostKDModel:
 		self.param['subsample'] = opt_subsample
 		self.param['colsample_bytree'] = opt_colsample_bytree
 
-		# # Train 1 last time using optimal hyperparams
-		# print()
-		# print('Re-training with optimal hyperparameters...')
-		# self.bst = xgb.train(self.param, dtrain, num_boost_round=opt_num_round, evals=evallist, verbose_eval=self.verbose)
+		# Train 1 last time using optimal hyperparams
+		print()
+		print('Re-training with optimal hyperparameters...')
+		dtrain_complete = xgb.DMatrix(x_train, label=y_train, feature_names=self.feature_names)
+		evallist = [(dtrain_complete, 'all_train')]
+		self.bst = xgb.train(self.param, dtrain_complete, num_boost_round=opt_num_round, evals=evallist, verbose_eval=self.verbose)
 
 
 

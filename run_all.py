@@ -87,8 +87,11 @@ test_model(XGBoostKDModel(), x, y)
 print("")
 print("Scikit Models:")
 
-print("Logistic Regression")
-test_model(ScikitModel(LogisticRegression()), x, y)
+print("Logistic Regression: L2 Penalty")
+test_model(ScikitModel(LogisticRegression(penalty='l2')), x, y)
+
+print("Logistic Regression: L1 Penalty")
+test_model(ScikitModel(LogisticRegression(penalty='l1')), x, y)
 
 print("Support Vector Classification: Linear Kernel")
 test_model(ScikitModel(SVC(kernel='linear')), x, y)
