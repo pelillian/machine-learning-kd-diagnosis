@@ -18,6 +18,7 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn.metrics import fbeta_score
 from skopt import gp_minimize
+from sklearn.model_selection import StratifiedKFold
 
 class DeepKDModel:
 	def __init__(self, 
@@ -55,7 +56,10 @@ class DeepKDModel:
 		self.train(x_train, y_train)
 		return self.test(x_test, y_test)
 
-	def train(self, x_train, y_train):
+	def train(self, x_train, y_train, verbose=None):
+		if verbose == None:
+			verbose = self.verbose
+
 		tf.reset_default_graph()
 
 		# onehot
@@ -120,7 +124,7 @@ class DeepKDModel:
 
 				avg_cost /= num_batches
 
-				if self.verbose and epoch % self.display_step == 0:
+				if verbose and epoch % self.display_step == 0:
 					print('Epoch', epoch + 1, ' cost', avg_cost)
 
 			saver.save(sess, './deepnet/deep_kd_model')
@@ -151,8 +155,11 @@ class DeepKDModel:
 
 	# Weighted score of precision/recall
 		# See: http://scikit-learn.org/stable/modules/generated/sklearn.metrics.fbeta_score.html
+		# Takes in 1 specific test set (fold)
 	def fbeta(self, x_test, y_test, beta=1):
-		y_test_binary = np.argmax(y_test, axis=1) # un-one hot y_test
+		# onehot
+		y_test = y_test.astype(int)
+		y_test_onehot = np.eye(np.max(y_test) + 1)[y_test]
 
 		# preprocessing
 		x_test = self.scaler.transform(x_test)
@@ -165,17 +172,29 @@ class DeepKDModel:
 		with tf.Session() as sess:
 			saver = tf.train.import_meta_graph('./deepnet/deep_kd_model.meta')
 			saver.restore(sess, tf.train.latest_checkpoint('./deepnet/'))
-			y_pred_binary = y_pred.eval({self.x: x_test, self.y: y_test, self.keep_prob: 1})
+			y_pred_binary = y_pred.eval({self.x: x_test, self.y: y_test_onehot, self.keep_prob: 1})
 
 			# if self.verbose:
 			# 	print("Accuracy", test_accuracy)
 
 			# y_pred_binary = np.where(test_results >= 0.5, 1, 0) # threshold predictions at 0.5
-			return fbeta_score(y_test_binary, y_pred_binary, beta)
+			return fbeta_score(y_test, y_pred_binary, beta)
+
+
+	# return fbeta averaged over k folds
+	def kfold_fbeta(self, x, y, k=5, beta=1):
+		fbetas = []
+		kf = StratifiedKFold(n_splits=k, shuffle=True, random_state=90007)
+		for train_idx, test_idx in kf.split(x, y):
+			x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+			self.train(x_train, y_train, verbose=False) # train on fold
+			fbeta = self.fbeta(x_test, y_test) # evaluate
+			fbetas.append(fbeta)
+		return np.mean(fbetas)
 
 
 	# Optimize model hyperparameters based on fbeta_score, save optimal parameters in member vars
-	def optimize_hyperparameters(self, x_train, x_test, y_train, y_test, beta=1):
+	def optimize_hyperparameters(self, x, y, num_calls=10, random_state=None, beta=1, k=5):
 		# Optimization objective for skopt: returns negated fbeta score
 		# Input: tuple of hyperparameters
 		def skopt_objective(params):
@@ -192,11 +211,8 @@ class DeepKDModel:
 			self.batch_size = batch_size
 			self.dropout = dropout # probability to keep a unit
 
-			# Train model using inputted hyperparameters
-			self.train(x_train, y_train)
-
 			# Return negated fbeta_score (minimize negative fbeta --> maximize fbeta)
-			return -self.fbeta(x_test, y_test, beta)
+			return -self.kfold_fbeta(x, y, k=k, beta=beta)
 
 		# Define hyperparameter space
 		hyperparam_space = [
@@ -211,12 +227,12 @@ class DeepKDModel:
 
 		# Call skopt to run smart "grid search"
 		opt_results = gp_minimize(skopt_objective, hyperparam_space,
-						n_calls=10,
-						random_state=0,
+						n_calls=num_calls,
+						random_state=random_state,
 						verbose=self.verbose)
 		# Unpack results
 		optimal_hyperparams = opt_results.x
-		optimal_score = opt_results.fun
+		optimal_score = -opt_results.fun
 
 		opt_num_hidden_layers = optimal_hyperparams[0]
 		opt_num_nodes_initial = optimal_hyperparams[1]
@@ -230,7 +246,7 @@ class DeepKDModel:
 		if self.verbose:
 			print()
 			print('----- HYPERPARAMETER OPTIMIZATION RESULTS -----')
-			print('Optimal fbeta score: ', optimal_score)
+			print('Optimal avg fbeta score: ', optimal_score)
 			print('Optimal num_hidden_layers: ', opt_num_hidden_layers)
 			print('Optimal num_nodes_initial: ', opt_num_nodes_initial)
 			print('Optimal num_nodes_scaling_factor: ', opt_num_nodes_scaling_factor)
@@ -248,10 +264,10 @@ class DeepKDModel:
 		self.batch_size = opt_batch_size
 		self.dropout = opt_dropout
 
-		# Train 1 last time using optimal hyperparams
-		print()
-		print('Re-training with optimal hyperparameters...')
-		self.train(x_train, y_train)
+		# # Train 1 last time using optimal hyperparams
+		# print()
+		# print('Re-training with optimal hyperparameters...')
+		# self.train(x_train, y_train)
 
 
 

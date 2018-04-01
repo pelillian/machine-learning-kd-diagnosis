@@ -1,4 +1,4 @@
-from deepnet.deep_model import DeepKDModel
+from xgbst.xgboost_model import XGBoostKDModel
 from preprocess import load_data
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
@@ -7,11 +7,8 @@ from sklearn.model_selection import StratifiedKFold
 x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean')
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
-# Initialize model
-model = DeepKDModel(verbose=True)
-
-# Optimize hyperparameters
-model.optimize_hyperparameters(x, y, num_calls=10, random_state=0)
+model = XGBoostKDModel(verbose=True)
+model.optimize_hyperparameters(x, y, num_calls=100, random_state=90007)
 
 # Explain TN, FP, FN, TP
 def compute_stats(y_pred, y_test):
