@@ -7,6 +7,14 @@ This project uses Kawasaki Disease (KD) patient data to train a model that predi
 * XGBoost
 * K-Nearest Neighbors (KNN)
 * Support Vector Machine (SVM)
+* Logistic Regression
+* Random Forest
+
+### Evaluation Methodologies/Metrics:
+* 5-Fold (Nested) Cross Validation
+* Precision, Recall
+* F-Beta score
+* AUROC
 
 ### Dependencies:
 * Python 3.x
