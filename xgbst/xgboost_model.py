@@ -20,7 +20,7 @@ from sklearn.model_selection import StratifiedKFold
 
 class XGBoostKDModel:
 	def __init__(self, max_depth=5, eta=0.3, objective='binary:logistic', eval_metric='auc',
-			num_round=20, verbose=False):
+			num_round=20, verbose=False, data_folder="data/"):
 		# Set Hyperparameters
     	# 	Docs: https://xgboost.readthedocs.io/en/latest/parameter.html
 		self.param = {
@@ -34,7 +34,7 @@ class XGBoostKDModel:
 		self.verbose = verbose
 
 		# Get Feature Names
-		f = open('data/kd_dataset.pkl','rb')
+		f = open(data_folder+'kd_dataset.pkl','rb')
 		x_tr, _, _, _ = pkl.load(f)
 		self.feature_names = list(x_tr)
 
@@ -63,6 +63,11 @@ class XGBoostKDModel:
 		# 	plt.savefig('xgb-sample-tree.pdf')
 
 		return (np.array(self.bst.predict(dtest)) > 0.5).astype(int)
+
+	# Return predicted probabilities of KD
+	def predict(self, x_test):
+		dtest = xgb.DMatrix(x_test, label=None, feature_names=self.feature_names)
+		return self.bst.predict(dtest)
 
 
 	# # Weighted score of precision/recall
@@ -174,5 +179,11 @@ class XGBoostKDModel:
 		evallist = [(dtrain_complete, 'all_train')]
 		self.bst = xgb.train(self.param, dtrain_complete, num_boost_round=opt_num_round, evals=evallist, verbose_eval=self.verbose)
 
+	# Save model to pkl file
+	def save_model(self):
+		pkl.dump(self.bst, open("xgb_model.pkl", "wb"))
 
+	# Load model from file
+	def load_model(self):
+		self.bst = pkl.load(open("xgb_model.pkl", "rb"))
 

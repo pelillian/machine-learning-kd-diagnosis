@@ -52,11 +52,11 @@ class DeepKDModel:
 		
 		return fc
 
-	def train_test(self, x_train, x_test, y_train, y_test):
-		self.train(x_train, y_train)
-		return self.test(x_test, y_test)
+	def train_test(self, x_train, x_test, y_train, y_test, weights_folder='./deepnet/'):
+		self.train(x_train, y_train, weights_folder=weights_folder)
+		return self.test(x_test, y_test, weights_folder=weights_folder)
 
-	def train(self, x_train, y_train, verbose=None):
+	def train(self, x_train, y_train, verbose=None, weights_folder='./deepnet/'):
 		if verbose == None:
 			verbose = self.verbose
 
@@ -127,10 +127,10 @@ class DeepKDModel:
 				if verbose and epoch % self.display_step == 0:
 					print('Epoch', epoch + 1, ' cost', avg_cost)
 
-			saver.save(sess, './deepnet/deep_kd_model')
+			saver.save(sess, weights_folder+'deep_kd_model')
 
 	# Returns binary vector of predictions from test set (1 = KD, 0 = FC)
-	def test(self, x_test, y_test):
+	def test(self, x_test, y_test, weights_folder='./deepnet/'):
 		# preprocessing
 		x_test = self.scaler.transform(x_test)
 		# onehot
@@ -143,14 +143,35 @@ class DeepKDModel:
 		# accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
 
 		with tf.Session() as sess:
-			saver = tf.train.import_meta_graph('./deepnet/deep_kd_model.meta')
-			saver.restore(sess, tf.train.latest_checkpoint('./deepnet/'))
+			saver = tf.train.import_meta_graph(weights_folder+'deep_kd_model.meta')
+			saver.restore(sess, tf.train.latest_checkpoint(weights_folder))
 			test_results = y_pred.eval({self.x: x_test, self.y: y_test, self.keep_prob: 1})
 
 			# if self.verbose:
 			# 	print("Accuracy", test_accuracy)
 
 			return test_results # binary vector of test results
+
+
+	# Returns predicted logits from test set
+	def predict(self, x_test, weights_folder='./deepnet/'):
+		# preprocessing
+		x_test = self.scaler.transform(x_test)
+
+		# set up tf
+		y_pred = self.model
+		# end_pred = tf.equal(tf.argmax(self.model, 1), tf.argmax(self.y, 1))
+		# accuracy = tf.reduce_mean(tf.cast(end_pred, "float"))
+
+		with tf.Session() as sess:
+			saver = tf.train.import_meta_graph(weights_folder+'deep_kd_model.meta')
+			saver.restore(sess, tf.train.latest_checkpoint(weights_folder))
+			pred_results = y_pred.eval({self.x: x_test, self.keep_prob: 1})
+
+			# if self.verbose:
+			# 	print("Accuracy", test_accuracy)
+
+			return pred_results # binary vector of test results
 
 
 	# Weighted score of precision/recall

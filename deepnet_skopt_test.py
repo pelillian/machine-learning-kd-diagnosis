@@ -11,7 +11,7 @@ x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 model = DeepKDModel(verbose=True)
 
 # Optimize hyperparameters
-model.optimize_hyperparameters(x, y, num_calls=250, random_state=12345)
+model.optimize_hyperparameters(x, y, num_calls=250, random_state=1)
 
 # Explain TN, FP, FN, TP
 def compute_stats(y_pred, y_test):
