@@ -19,14 +19,16 @@ from sklearn.gaussian_process.kernels import RBF
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
-
 from deepnet.deep_model import DeepKDModel
 from xgbst.xgboost_model import XGBoostKDModel
 
 from preprocess import load_data
 
+return_ids = True
+
 class ScikitModel:
 	def __init__(self, skmodel, params, verbose=False):
+		skmodel.verbose = verbose
 		self.skmodel = skmodel
 		self.paramsearch = GridSearchCV(self.skmodel, params, cv=5)
 		self.verbose = verbose
@@ -65,24 +67,39 @@ def explain_stats(stats):
 def test_model(model, x, y):
 	stats_arr = []
 	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=90007)
+
+	# this var will hold the pnum and pred for the entire set
+	all_pnum_pred = []
 	for train_idx, test_idx in kf.split(x, y):
 		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+
+		if return_ids:
+			pnum_x_test = x_test[:, 0]
+			np.delete(x_train, [0], axis=1)
+			np.delete(x_test, [0], axis=1)
+
 		y_pred = model.train_test(x_train, x_test, y_train, y_test)
+		if return_ids:
+			all_pnum_pred.append(np.column_stack((pnum_x_test, y_pred)))
+
 		stats_arr.append(compute_stats(y_pred, y_test))
+
+	if return_ids:
+		all_pnum_pred = np.vstack(all_pnum_pred)
+		print(all_pnum_pred)
 
 	explain_stats(np.mean(stats_arr, axis=0))
 
-
 # load data
-x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean')
+x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean', return_ids=return_ids)
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
-# print("Our Models:")
-# print("Deep Model")
-# test_model(DeepKDModel(), x, y)
+print("Our Models:")
+print("Deep Model")
+test_model(DeepKDModel(), x, y)
 
-# print("XGBoost Model")
-# test_model(XGBoostKDModel(), x, y)
+print("XGBoost Model")
+test_model(XGBoostKDModel(), x, y)
 
 print("")
 print("Scikit Models:")
@@ -97,10 +114,12 @@ params = {
 }
 test_model(ScikitModel(LogisticRegression(), params), x, y)
 
+exit(0)
+
 print("Support Vector Classification")
 params = {
-	'C': np.logspace(-3, 10, 14),
-	'gamma': np.logspace(-10, 4, 15),
+	'C': np.logspace(-3, 6, 10),
+	'gamma': np.logspace(-8, 4, 13),
 	'kernel': ['linear', 'rbf', 'poly']
 }
 test_model(ScikitModel(SVC(), params), x, y)
@@ -108,17 +127,17 @@ test_model(ScikitModel(SVC(), params), x, y)
 print("Random Forest")
 params = {
 	'max_features': ['auto', 'sqrt'],
-	'n_estimators': [100, 200, 400, 600, 800, 1200, 1600, 2000],
+	'n_estimators': [100, 200, 400, 800, 1600],
 	'min_samples_leaf': [1, 2, 4],
 	'min_samples_split': [2, 4, 8, 16],
 	'bootstrap': [True, False],
-	'max_depth': [10, 20, 30, 40, 50, 60, 80, 100, None],
+	'max_depth': [10, 20, 40, 80, None],
 }
 test_model(ScikitModel(RandomForestClassifier(), params), x, y)
 
 print("K Nearest Neighbors")
 params = {
-	'n_neighbors':[1, 2, 3, 5, 7, 9, 13, 17, 25],
+	'n_neighbors':[1, 2, 3, 5, 9, 17],
 	'leaf_size':[1,2,3,5],
 	'weights':['uniform', 'distance'],
 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
