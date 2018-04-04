@@ -63,7 +63,7 @@ def fill_nan(data, mode='mean', k=5):
 	# one_hot: True = labels are one-hot vectors ([Not KD, KD]), False = labels are values (1 = KD)
 	# fill_mode: how to fill NaN values (see fill_nan())
 	# k: how many nearest neighbors to look at for KNN-based imputation
-def load(one_hot=False, fill_mode='mean', standardize=True, k=5):
+def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset.pkl','rb')
@@ -71,6 +71,12 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5):
 		f = open('data/kd_dataset.pkl','rb')
 	x_train, x_test, y_train, y_test = pkl.load(f)
 	f.close()
+
+	test_peternum = x_test['peternum']
+	train_peternum = x_train['peternum']
+	if not return_ids:
+		del x_test['peternum']
+		del x_train['peternum']
 
 	# Standardize input data (mean 0, variance 1), while ignoring NaNs
 	if fill_mode == 'knn': # Standardizing is required for kNN-based imputation
@@ -83,6 +89,10 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5):
 		y_train = np.eye(np.max(y_train) + 1)[y_train]
 		y_test = np.eye(np.max(y_test) + 1)[y_test]
 
+	if return_ids:
+		x_test['peternum'] = test_peternum
+		x_train['peternum'] = train_peternum
+	
 	# Return preprocessed (x_train, x_test, y_train, y_test)
 	preprocessed_data = fill_nan(x_train, mode=fill_mode, k=k), fill_nan(x_test, mode=fill_mode, k=k), \
 		fill_nan(y_train, mode=fill_mode, k=k), fill_nan(y_test, mode=fill_mode, k=k)

@@ -23,7 +23,7 @@ data = pd.read_excel(open('../data/KD-FC-Peter-alg-BLINDED-set1-20171229.xlsx', 
 # replace missing data with nan so that we can handle it easier later
 data.replace('NA', np.nan)
 
-del data['peternum']
+# del data['peternum']
 del data['signESR']
 del data['signCRP']
 del data['signALT']
