@@ -51,20 +51,24 @@ def compute_stats(y_pred, y_test):
 	return np.unique(contigview, return_counts=True)[1].tolist()
 
 # Explain TN, FP, FN, TP
-def explain_stats(stats):
+def explain_stats(stats, model_name):
 	fc_total = stats[0] + stats[1]
 	kd_total = stats[2] + stats[3]
-	fc_as_fc = (stats[0] / fc_total) * 100
-	print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)")
-	fc_as_kd = (stats[1] / fc_total) * 100
-	print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)")
-	kd_as_fc = (stats[2] / kd_total) * 100
-	print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
-	kd_as_kd = (stats[3] / kd_total) * 100
-	print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
+	filename = model_name + ".txt"
+	with open(filename, "a") as resultsfile:
+		fc_as_fc = (stats[0] / fc_total) * 100
+		print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)", file=resultsfile)
+		fc_as_kd = (stats[1] / fc_total) * 100
+		print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)", file=resultsfile)
+		kd_as_fc = (stats[2] / kd_total) * 100
+		print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)", file=resultsfile)
+		kd_as_kd = (stats[3] / kd_total) * 100
+		print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)", file=resultsfile)
 
 # Train and evaluate model, print out results
-def test_model(model, x, y):
+def test_model(model, x, y, model_name):
+	print(model_name)
+
 	stats_arr = []
 	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=90007)
 
@@ -79,32 +83,30 @@ def test_model(model, x, y):
 			np.delete(x_test, [0], axis=1)
 
 		y_pred = model.train_test(x_train, x_test, y_train, y_test)
+		stats_arr.append(compute_stats(y_pred, y_test))
+
 		if return_ids:
 			all_pnum_pred.append(np.column_stack((pnum_x_test, y_pred)))
 
-		stats_arr.append(compute_stats(y_pred, y_test))
-
 	if return_ids:
-		all_pnum_pred = np.vstack(all_pnum_pred)
-		print(all_pnum_pred)
+		all_pnum_pred = np.vstack(all_pnum_pred).astype(int)
+		filename = model_name + ".out"
+		np.savetxt(filename, all_pnum_pred, delimiter=',')
 
-	explain_stats(np.mean(stats_arr, axis=0))
+	explain_stats(np.mean(stats_arr, axis=0), model_name)
 
 # load data
-x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='mean', return_ids=return_ids)
+x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='knn', return_ids=return_ids)
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
 print("Our Models:")
-print("Deep Model")
-test_model(DeepKDModel(), x, y)
+test_model(DeepKDModel(), x, y, "Deep Model")
 
-print("XGBoost Model")
-test_model(XGBoostKDModel(), x, y)
+test_model(XGBoostKDModel(), x, y, "XGBoost Model")
 
 print("")
 print("Scikit Models:")
 
-print("Logistic Regression")
 params = {
 	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
 	# 'multi_class': ['ovr', 'multinomial'],
@@ -112,19 +114,15 @@ params = {
 	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
 	# 'penalty': ['l1', 'l2']
 }
-test_model(ScikitModel(LogisticRegression(), params), x, y)
+test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
 
-exit(0)
-
-print("Support Vector Classification")
 params = {
 	'C': np.logspace(-3, 6, 10),
 	'gamma': np.logspace(-8, 4, 13),
 	'kernel': ['linear', 'rbf', 'poly']
 }
-test_model(ScikitModel(SVC(), params), x, y)
+test_model(ScikitModel(SVC(), params), x, y, "Support Vector Classification")
 
-print("Random Forest")
 params = {
 	'max_features': ['auto', 'sqrt'],
 	'n_estimators': [100, 200, 400, 800, 1600],
@@ -133,9 +131,8 @@ params = {
 	'bootstrap': [True, False],
 	'max_depth': [10, 20, 40, 80, None],
 }
-test_model(ScikitModel(RandomForestClassifier(), params), x, y)
+test_model(ScikitModel(RandomForestClassifier(), params), x, y, "Random Forest")
 
-print("K Nearest Neighbors")
 params = {
 	'n_neighbors':[1, 2, 3, 5, 9, 17],
 	'leaf_size':[1,2,3,5],
@@ -143,5 +140,5 @@ params = {
 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
 	'n_jobs':[-1]
 	}
-test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
+test_model(ScikitModel(KNeighborsClassifier(4), params), x, y, "K Nearest Neighbors")
 
