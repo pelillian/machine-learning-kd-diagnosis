@@ -36,6 +36,7 @@ class XGBoostKDModel:
 		# Get Feature Names
 		f = open(data_folder+'kd_dataset.pkl','rb')
 		x_tr, _, _, _ = pkl.load(f)
+		del x_tr['peternum']
 		self.feature_names = list(x_tr)
 
 
