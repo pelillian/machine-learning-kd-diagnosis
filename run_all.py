@@ -27,11 +27,9 @@ from preprocess import load_data
 return_ids = True
 
 class ScikitModel:
-	def __init__(self, skmodel, params, verbose=False):
-		skmodel.verbose = verbose
+	def __init__(self, skmodel, params):
 		self.skmodel = skmodel
 		self.paramsearch = GridSearchCV(self.skmodel, params, cv=5)
-		self.verbose = verbose
 
 	def train_test(self, x_train, x_test, y_train, y_test):
 		params = self.skmodel.get_params(deep=True)
@@ -79,8 +77,8 @@ def test_model(model, x, y, model_name):
 
 		if return_ids:
 			pnum_x_test = x_test[:, 0]
-			np.delete(x_train, [0], axis=1)
-			np.delete(x_test, [0], axis=1)
+			x_train = np.delete(x_train, 0, axis=1)
+			x_test = np.delete(x_test, 0, axis=1)
 
 		y_pred = model.train_test(x_train, x_test, y_train, y_test)
 		stats_arr.append(compute_stats(y_pred, y_test))
@@ -99,26 +97,26 @@ def test_model(model, x, y, model_name):
 x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='knn', return_ids=return_ids)
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
-print("Our Models:")
-test_model(DeepKDModel(), x, y, "Deep Model")
+# print("Our Models:")
+# test_model(DeepKDModel(), x, y, "Deep Model")
 
-test_model(XGBoostKDModel(), x, y, "XGBoost Model")
+# test_model(XGBoostKDModel(), x, y, "XGBoost Model")
 
-print("")
-print("Scikit Models:")
+# print("")
+# print("Scikit Models:")
+
+# params = {
+# 	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
+# 	# 'multi_class': ['ovr', 'multinomial'],
+# 	'class_weight': [None, 'balanced'],
+# 	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
+# 	# 'penalty': ['l1', 'l2']
+# }
+# test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
 
 params = {
-	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
-	# 'multi_class': ['ovr', 'multinomial'],
-	'class_weight': [None, 'balanced'],
-	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
-	# 'penalty': ['l1', 'l2']
-}
-test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
-
-params = {
-	'C': np.logspace(-3, 6, 10),
-	'gamma': np.logspace(-8, 4, 13),
+	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
+	'gamma': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
 	'kernel': ['linear', 'rbf', 'poly']
 }
 test_model(ScikitModel(SVC(), params), x, y, "Support Vector Classification")
