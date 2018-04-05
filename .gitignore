@@ -143,3 +143,6 @@ $RECYCLE.BIN/
 
 deepnet/deep_kd_model.meta
 deepnet/deep_kd_model.index
+deepnet/deep_kd_model.data-00000-of-00001
+*.out
+*.txt
