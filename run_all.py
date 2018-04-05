@@ -97,22 +97,22 @@ def test_model(model, x, y, model_name):
 x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='knn', return_ids=return_ids)
 x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
 
-# print("Our Models:")
-# test_model(DeepKDModel(), x, y, "Deep Model")
+print("Our Models:")
+test_model(DeepKDModel(), x, y, "Deep Model")
 
-# test_model(XGBoostKDModel(), x, y, "XGBoost Model")
+test_model(XGBoostKDModel(), x, y, "XGBoost Model")
 
-# print("")
-# print("Scikit Models:")
+print("")
+print("Scikit Models:")
 
-# params = {
-# 	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
-# 	# 'multi_class': ['ovr', 'multinomial'],
-# 	'class_weight': [None, 'balanced'],
-# 	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
-# 	# 'penalty': ['l1', 'l2']
-# }
-# test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
+params = {
+	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
+	# 'multi_class': ['ovr', 'multinomial'],
+	'class_weight': [None, 'balanced'],
+	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
+	# 'penalty': ['l1', 'l2']
+}
+test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
 
 params = {
 	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
