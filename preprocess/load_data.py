@@ -12,6 +12,20 @@ import pickle as pkl
 import numpy as np
 import numpy.ma as ma # masked array
 
+# Standardize columns in a single dataframe (mean 0, variance 1) while ignoring NaNs
+def standardize_df(df):
+	# Convert each column to z-scores
+	for col in list(df.columns):
+		feature_mean = df[col].mean()
+		feature_std = df[col].std(ddof=0)
+
+		# Mean-centering
+		df[col] = df[col] - feature_mean
+
+		# Standardizing (divide by std-dev)
+		if feature_std != 0:
+			df[col] = df[col] / feature_std
+
 # Standardize columns in train/test dataframes (mean 0, variance 1) while ignoring NaNs
 	# Use df_train's (mean, std) for both dataframes for consistency
 def standardize_dfs(df_train, df_test):
@@ -97,3 +111,34 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True
 	preprocessed_data = fill_nan(x_train, mode=fill_mode, k=k), fill_nan(x_test, mode=fill_mode, k=k), \
 		fill_nan(y_train, mode=fill_mode, k=k), fill_nan(y_test, mode=fill_mode, k=k)
 	return preprocessed_data
+
+
+# Load expanded dataset from pickle dump
+# Returns: x_all, y_all, ids_all (numpy arrays)
+def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True):
+	# Load pickle dump
+	try:
+		f = open('../data/kd_dataset_expanded.pkl','rb')
+	except:
+		f = open('./data/kd_dataset_expanded.pkl','rb')
+	x_all, y_all, ids_all = pkl.load(f)
+	f.close()
+
+	# Standardize
+	if fill_mode == 'knn':
+		standardize = True
+	if standardize:
+		standardize_df(x_all)
+
+	# One-hot encode y
+	if (one_hot):
+		y_all = np.eye(np.max(y_all) + 1)[y_all]
+
+	# Fill NaNs
+	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
+
+	# Convert to numpy.ndarray
+	y_array = y_all.as_matrix()
+	ids_array = ids_all.as_matrix()
+
+	return (x_filled, y_array, ids_array)

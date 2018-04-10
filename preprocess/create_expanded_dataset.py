@@ -19,7 +19,7 @@ df_numeric.columns
 
 # Drop some extraneous features
 drop_features = ['peternum (12/29/17)', 'peternum cohort 12/29/17: 1=training, 2=validation',
-                'pnum cohort 3/15/18: 1=training, 2=validation', 'age_lab', 'phgb', 'phct']
+                'pnum cohort 3/15/18: 1=training, 2=validation', 'age_lab', 'phgb', 'phct', 'fever']
 df_cleaned = df_numeric.drop(drop_features, axis=1)
 
 # Split training features/label
