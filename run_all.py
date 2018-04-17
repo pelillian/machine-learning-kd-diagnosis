@@ -12,6 +12,7 @@ import numpy as np
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, fbeta_score
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -24,16 +25,19 @@ from xgbst.xgboost_model import XGBoostKDModel
 
 from preprocess import load_data
 
-return_ids = True
+# Beta for fbeta_score
+BETA = 2 # 0-1 favors precision, >1 (up to infinity) favors recall
 
+# ScikitModel wrapper class
 class ScikitModel:
 	def __init__(self, skmodel, params):
 		self.skmodel = skmodel
-		self.paramsearch = GridSearchCV(self.skmodel, params, cv=5)
+		self.cv_scorer = make_scorer(fbeta_score, beta=BETA) # optimize for fbeta_score
+		self.paramsearch = GridSearchCV(self.skmodel, params, cv=5, scoring=self.cv_scorer, verbose=True)
 
 	def train_test(self, x_train, x_test, y_train, y_test):
 		params = self.skmodel.get_params(deep=True)
-		print(params)
+		# print(params)
 		self.paramsearch.fit(x_train, y_train)
 		y_pred = self.paramsearch.predict(x_test)
 		return y_pred
@@ -64,7 +68,7 @@ def explain_stats(stats, model_name):
 		print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)", file=resultsfile)
 
 # Train and evaluate model, print out results
-def test_model(model, x, y, model_name):
+def test_model(model, x, y, model_name, return_ids=True):
 	print(model_name)
 
 	stats_arr = []
@@ -74,53 +78,61 @@ def test_model(model, x, y, model_name):
 	all_pnum_pred = []
 	for train_idx, test_idx in kf.split(x, y):
 		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		ids_train, ids_test = ids[train_idx], ids[test_idx]
 
-		if return_ids:
-			pnum_x_test = x_test[:, 0]
-			x_train = np.delete(x_train, 0, axis=1)
-			x_test = np.delete(x_test, 0, axis=1)
+		# if return_ids:
+		# 	pnum_x_test = x_test[:, 0]
+		# 	x_train = np.delete(x_train, 0, axis=1)
+		# 	x_test = np.delete(x_test, 0, axis=1)
 
 		y_pred = model.train_test(x_train, x_test, y_train, y_test)
 		stats_arr.append(compute_stats(y_pred, y_test))
 
-		if return_ids:
-			all_pnum_pred.append(np.column_stack((pnum_x_test, y_pred)))
+		if return_ids == True:
+			all_pnum_pred.append(np.column_stack((ids_test, y_pred)))
 
-	if return_ids:
+	if return_ids == True:
 		all_pnum_pred = np.vstack(all_pnum_pred).astype(int)
 		filename = model_name + ".out"
 		np.savetxt(filename, all_pnum_pred, delimiter=',')
 
 	explain_stats(np.mean(stats_arr, axis=0), model_name)
 
-# load data
-x_train, x_test, y_train, y_test = load_data.load(one_hot=False, fill_mode='knn', return_ids=return_ids)
-x, y = np.concatenate((x_train, x_test)), np.concatenate((y_train, y_test))
+# Load expanded dataset
+x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 
 print("Our Models:")
-test_model(DeepKDModel(), x, y, "Deep Model")
 
-test_model(XGBoostKDModel(), x, y, "XGBoost Model")
+# Test DNN Model
+# test_model(DeepKDModel(), x, y, "Deep Model")
+
+# Test XGBoost Model
+# test_model(XGBoostKDModel(), x, y, "XGBoost Model")
 
 print("")
 print("Scikit Models:")
 
+# Logistic Regression
 params = {
-	'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
+	# 'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
 	# 'multi_class': ['ovr', 'multinomial'],
-	'class_weight': [None, 'balanced'],
-	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]#,
+	# 'class_weight': [None, 'balanced'],
+	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
+	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
 	# 'penalty': ['l1', 'l2']
 }
 test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
 
+# SVM/SVC
 params = {
 	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
 	'gamma': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
-	'kernel': ['linear', 'rbf', 'poly']
+	'kernel': ['linear', 'rbf', 'poly'],
+	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
 }
 test_model(ScikitModel(SVC(), params), x, y, "Support Vector Classification")
 
+# Random Forest
 params = {
 	'max_features': ['auto', 'sqrt'],
 	'n_estimators': [100, 200, 400, 800, 1600],
@@ -128,15 +140,18 @@ params = {
 	'min_samples_split': [2, 4, 8, 16],
 	'bootstrap': [True, False],
 	'max_depth': [10, 20, 40, 80, None],
+	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
 }
 test_model(ScikitModel(RandomForestClassifier(), params), x, y, "Random Forest")
 
+# K-NN
 params = {
 	'n_neighbors':[1, 2, 3, 5, 9, 17],
 	'leaf_size':[1,2,3,5],
 	'weights':['uniform', 'distance'],
 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
-	'n_jobs':[-1]
+	'n_jobs':[-1],
+	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
 	}
 test_model(ScikitModel(KNeighborsClassifier(4), params), x, y, "K Nearest Neighbors")
 
