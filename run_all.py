@@ -20,13 +20,14 @@ from sklearn.gaussian_process.kernels import RBF
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
-from deepnet.deep_model import DeepKDModel
-from xgbst.xgboost_model import XGBoostKDModel
+# from deepnet.deep_model import DeepKDModel
+# from xgbst.xgboost_model import XGBoostKDModel
 
 from preprocess import load_data
 
 # Beta for fbeta_score
-BETA = 2 # 0-1 favors precision, >1 (up to infinity) favors recall
+BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
+CLASS_WEIGHT = "balanced"
 
 # ScikitModel wrapper class
 class ScikitModel:
@@ -57,6 +58,7 @@ def explain_stats(stats, model_name):
 	fc_total = stats[0] + stats[1]
 	kd_total = stats[2] + stats[3]
 	filename = model_name + ".txt"
+	# By default we append to the results file so we don't erase previous results
 	with open(filename, "a") as resultsfile:
 		fc_as_fc = (stats[0] / fc_total) * 100
 		print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)", file=resultsfile)
@@ -66,6 +68,7 @@ def explain_stats(stats, model_name):
 		print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)", file=resultsfile)
 		kd_as_kd = (stats[3] / kd_total) * 100
 		print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)", file=resultsfile)
+		print("", file=resultsfile)
 
 # Train and evaluate model, print out results
 def test_model(model, x, y, model_name, return_ids=True):
@@ -116,9 +119,8 @@ print("Scikit Models:")
 params = {
 	# 'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
 	# 'multi_class': ['ovr', 'multinomial'],
-	# 'class_weight': [None, 'balanced'],
 	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
-	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
+	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
 	# 'penalty': ['l1', 'l2']
 }
 test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
@@ -128,7 +130,7 @@ params = {
 	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
 	'gamma': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
 	'kernel': ['linear', 'rbf', 'poly'],
-	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
+	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
 }
 test_model(ScikitModel(SVC(), params), x, y, "Support Vector Classification")
 
@@ -140,7 +142,7 @@ params = {
 	'min_samples_split': [2, 4, 8, 16],
 	'bootstrap': [True, False],
 	'max_depth': [10, 20, 40, 80, None],
-	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
+	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
 }
 test_model(ScikitModel(RandomForestClassifier(), params), x, y, "Random Forest")
 
@@ -151,7 +153,7 @@ params = {
 	'weights':['uniform', 'distance'],
 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
 	'n_jobs':[-1],
-	'class_weight':[{0: w} for w in [0.5, 1, 2, 5]] # how much to weigh FC patients over KD
+	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
 	}
 test_model(ScikitModel(KNeighborsClassifier(4), params), x, y, "K Nearest Neighbors")
 
