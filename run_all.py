@@ -30,7 +30,7 @@ from preprocess import load_data
 
 # Beta for fbeta_score
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
-CLASS_WEIGHT = "balanced"
+CLASS_WEIGHT = "none" # set to "none" or "balanced"
 USE_SMOTE = True
 
 # ScikitModel wrapper class
@@ -131,18 +131,20 @@ params = {
 	# 'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
 	# 'multi_class': ['ovr', 'multinomial'],
 	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
-	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
 	# 'penalty': ['l1', 'l2']
 }
+if (CLASS_WEIGHT != "none" and not USE_SMOTE):
+	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 test_model(ScikitModel(LogisticRegression(), params), x, y, "Logistic Regression")
 
 # SVM/SVC
 params = {
 	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
 	'gamma': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
-	'kernel': ['linear', 'rbf', 'poly'],
-	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
+	'kernel': ['linear', 'rbf', 'poly']
 }
+if (CLASS_WEIGHT != "none" and not USE_SMOTE):
+	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 test_model(ScikitModel(SVC(), params), x, y, "Support Vector Classification")
 
 # Random Forest
@@ -152,9 +154,10 @@ params = {
 	'min_samples_leaf': [1, 2, 4],
 	'min_samples_split': [2, 4, 8, 16],
 	'bootstrap': [True, False],
-	'max_depth': [10, 20, 40, 80, None],
-	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
+	'max_depth': [10, 20, 40, 80, None]
 }
+if (CLASS_WEIGHT != "none" and not USE_SMOTE):
+	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 test_model(ScikitModel(RandomForestClassifier(), params), x, y, "Random Forest")
 
 # K-NN
@@ -163,8 +166,9 @@ params = {
 	'leaf_size':[1,2,3,5],
 	'weights':['uniform', 'distance'],
 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
-	'n_jobs':[-1],
-	'class_weight':[CLASS_WEIGHT] # how much to weigh FC patients over KD
-	}
+	'n_jobs':[-1]
+}
+if (CLASS_WEIGHT != "none" and not USE_SMOTE):
+	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 test_model(ScikitModel(KNeighborsClassifier(4), params), x, y, "K Nearest Neighbors")
 
