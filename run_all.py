@@ -10,9 +10,12 @@
 
 import numpy as np
 
+from collections import Counter
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, fbeta_score
+from imblearn.over_sampling import SMOTE
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -28,6 +31,7 @@ from preprocess import load_data
 # Beta for fbeta_score
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "balanced"
+USE_SMOTE = True
 
 # ScikitModel wrapper class
 class ScikitModel:
@@ -81,7 +85,13 @@ def test_model(model, x, y, model_name, return_ids=True):
 	all_pnum_pred = []
 	for train_idx, test_idx in kf.split(x, y):
 		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
-		ids_train, ids_test = ids[train_idx], ids[test_idx]
+		if (USE_SMOTE):
+			sm = SMOTE(random_state=hash("usc trojans") % (2**32 - 1))
+			print(Counter(y_train))
+			x_train, y_train = sm.fit_sample(x_train, y_train)
+			print(Counter(y_train))
+		# ids_train can't be used if SMOTE is run
+		_, ids_test = ids[train_idx], ids[test_idx]
 
 		# if return_ids:
 		# 	pnum_x_test = x_test[:, 0]
@@ -104,13 +114,14 @@ def test_model(model, x, y, model_name, return_ids=True):
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 
-print("Our Models:")
+# print("Our Models:")
 
 # Test DNN Model
 # test_model(DeepKDModel(), x, y, "Deep Model")
 
 # Test XGBoost Model
 # test_model(XGBoostKDModel(), x, y, "XGBoost Model")
+# Our XGBoost class will not work with SMOTE because of how it loads the feature names
 
 print("")
 print("Scikit Models:")

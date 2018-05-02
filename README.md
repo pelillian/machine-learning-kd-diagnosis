@@ -25,3 +25,4 @@ This project uses Kawasaki Disease (KD) patient data to train a model that predi
 * XGBoost
 * [Fancyimpute](https://github.com/iskandr/fancyimpute)
 * [Scikit-Optimize](https://scikit-optimize.github.io/)
+* [Imbalanced-Learn](https://github.com/scikit-learn-contrib/imbalanced-learn)
