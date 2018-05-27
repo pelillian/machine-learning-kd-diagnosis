@@ -1,20 +1,19 @@
-# Deep Learning Kawasaki Disease Diagnosis
+# Machine Learning for Kawasaki Disease Diagnosis
 
-This project uses Kawasaki Disease (KD) patient data to train a model that predicts whether a given patient is a febrile control or has the disease.
+Kawasaki Disease (KD) is a rare heart condition that affects children all over the world. We use Kawasaki Disease patient data to train various machine learning models to predict whether a given patient has Kawasaki Disease or is a febrile control (i.e. does not have the disease). More information on Kawasaki Disease can be found [here](https://www.mayoclinic.org/diseases-conditions/kawasaki-disease/symptoms-causes/syc-20354598).
 
-### Methods Tested:
-* K-Nearest Neighbors (KNN)
+### Methods Evaluated:
+* K-Nearest Neighbors (K-NN)
 * Logistic Regression
 * Support Vector Machine (SVM)
-* Random Forest
-* XGBoost
+* Tree-Based Methods: Random Forest, XGBoost
 * Deep Neural Network
+* Ensemble/Voting Classifiers
 
 ### Evaluation Methodologies/Metrics:
-* 5-Fold (Nested) Cross Validation
-* Precision, Recall
-* F-Beta score
-* AUROC
+* 5-Fold (Nested) Cross Validation for model selection
+* Precision, Recall, F-Beta score
+* ROC-AUC
 
 ### Dependencies:
 * Python 3.x
