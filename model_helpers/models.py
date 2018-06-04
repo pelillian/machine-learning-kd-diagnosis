@@ -51,7 +51,7 @@ def explain_confusion(stats, indeterminates=False):
         pct_kd_indeterminate = (kd_indeterminate/kd_total) * 100
         print("KD left indeterminate: " + str(kd_indeterminate) + ", (" + str(pct_kd_indeterminate) + " %)")
         print("Avg specificity: " + str(stats[3]/(stats[3]+stats[2]))) # TP/(TP+FN)
-        print("Avg sensitivity: " + str(stats[0]/(stats[0]+stats[1[]]))) # TN/(TN+FP)
+        print("Avg sensitivity: " + str(stats[0]/(stats[0]+stats[1]))) # TN/(TN+FP)
 
 # Return thresholds corresponding to PPV >= 0.95 (predict KD) and NPV >= 0.95 (predict FC)
     # y_prob: predicted probabilities from trained model
