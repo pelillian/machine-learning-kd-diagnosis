@@ -46,9 +46,9 @@ def explain_confusion(stats, indeterminates=False):
         print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
         kd_as_kd = (stats[3] / kd_total) * 100
         print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
-        pct_fc_indeterminate = (fc_indeterminate/(fc_indeterminate+fc_total)) * 100
+        pct_fc_indeterminate = (fc_indeterminate/fc_total) * 100
         print("FC left indeterminate: " + str(fc_indeterminate) + ", (" + str(pct_fc_indeterminate) + " %)")
-        pct_kd_indeterminate = (kd_indeterminate/(kd_indeterminate+kd_total)) * 100
+        pct_kd_indeterminate = (kd_indeterminate/kd_total) * 100
         print("KD left indeterminate: " + str(kd_indeterminate) + ", (" + str(pct_kd_indeterminate) + " %)")
 
 # Return thresholds corresponding to PPV >= 0.95 (predict KD) and NPV >= 0.95 (predict FC)
