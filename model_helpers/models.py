@@ -27,6 +27,28 @@ def explain_confusion(stats):
     kd_as_kd = (stats[3] / kd_total) * 100
     print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
 
+# Return thresholds corresponding to PPV >= 0.95 (predict KD) and NPV >= 0.95 (predict FC)
+    # model: a pre-trained ScikitModel
+    # x_test, y_test: test data
+    # threshold_step: granularity with which to test out various classification thresholds
+def get_fc_kd_thresholds(model, x_test, y_test, threshold_step=0.001):
+    thresholds = np.arange(0.0, 1.0, step=threshold_step) # which thresholds to try
+    valid_thresholds_ppv = [] # thresholds where PPV >= 0.95
+    valid_thresholds_npv = [] # thresholds where NPV >= 0.95
+    
+    for threshold in thresholds:
+        y_pred = model.predict(x_test, threshold=threshold)
+        tn, fp, fn, tp = compute_confusion(y_pred, y_test)
+        ppv = tp / (tp + fp) # PPV: positive predictive value
+        npv = tn / (tn + fn) # NPV: negative predictive value
+        if ppv >= 0.95: 
+            valid_thresholds_ppv.append(threshold)
+        if npv >= 0.95:
+            valid_thresholds_npv.append(threshold)
+    kd_threshold = min(valid_thresholds_ppv) # lowest threshold past which PPV >= 0.95 (predict KD)
+    fc_threshold = max(valid_thresholds_npv) # highest threshold below which NPV >= 0.95 (predict FC)
+    return (fc_threshold, kd_threshold)
+
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
 def test_model(model, x, y, threshold=0.5):
     stats_arr = []
@@ -39,7 +61,8 @@ def test_model(model, x, y, threshold=0.5):
         best_scores.append(best_score)
         y_prob = model.predict_proba(x_test)
         y_pred = model.predict(x_test, threshold=threshold)
-        roc_curves.append(roc_curve(y_test, y_prob)) # tuple (fpr, tpr, thresholds)
+        roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
+        roc_curves.append(roc)
         stats_arr.append(compute_confusion(y_pred, y_test)) # confusion info info
     print('CV Confusion: ', [stats.tolist() for stats in stats_arr])
     print('Best CV scores: ', np.around(best_scores, decimals=4))
