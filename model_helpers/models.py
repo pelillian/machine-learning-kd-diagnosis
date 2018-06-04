@@ -9,42 +9,66 @@ from sklearn.metrics import make_scorer, fbeta_score, confusion_matrix, roc_curv
 from scipy import interp
 import matplotlib.pyplot as plt
 
+# Threshold y_prob at 'threshold' --> binary array
+def apply_threshold(y_prob, threshold=0.5):
+    y_pred = np.array(y_prob >= threshold).astype(np.int32) # thresholding
+    return y_pred
+
 # Compute TN, FP, FN, TP
 def compute_confusion(y_pred, y_test):
     confusion = confusion_matrix(y_test, y_pred) # calculate confusion matrix
-    return confusion.flatten()
+    return confusion.flatten().tolist()
 
 # Explain TN, FP, FN, TP
-def explain_confusion(stats):
-    fc_total = stats[0] + stats[1]
-    kd_total = stats[2] + stats[3]
-    fc_as_fc = (stats[0] / fc_total) * 100
-    print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)")
-    fc_as_kd = (stats[1] / fc_total) * 100
-    print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)")
-    kd_as_fc = (stats[2] / kd_total) * 100
-    print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
-    kd_as_kd = (stats[3] / kd_total) * 100
-    print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
+    # Stats = (TN, FP, FN, TP) OR (TN, FP, FN, TP, Indeterminates)
+def explain_confusion(stats, indeterminates=False):
+    if indeterminates == False:
+        fc_total = stats[0] + stats[1]
+        kd_total = stats[2] + stats[3]
+        fc_as_fc = (stats[0] / fc_total) * 100
+        print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)")
+        fc_as_kd = (stats[1] / fc_total) * 100
+        print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)")
+        kd_as_fc = (stats[2] / kd_total) * 100
+        print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
+        kd_as_kd = (stats[3] / kd_total) * 100
+        print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
+    else:
+        fc_total = stats[0] + stats[1]
+        kd_total = stats[2] + stats[3]
+        fc_indeterminate = stats[4]
+        kd_indeterminate = stats[5]
+        fc_as_fc = (stats[0] / fc_total) * 100
+        print("FC Classified as FC: " + str(stats[0]) + ", (" + str(fc_as_fc) + " %)")
+        fc_as_kd = (stats[1] / fc_total) * 100
+        print("FC Classified as KD: " + str(stats[1]) + ", (" + str(fc_as_kd) + " %)")
+        kd_as_fc = (stats[2] / kd_total) * 100
+        print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
+        kd_as_kd = (stats[3] / kd_total) * 100
+        print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
+        print("FC left indeterminate: " + str(fc_indeterminate))
+        print("KD left indeterminate: " + str(kd_indeterminate))
 
 # Return thresholds corresponding to PPV >= 0.95 (predict KD) and NPV >= 0.95 (predict FC)
-    # model: a pre-trained ScikitModel
-    # x_test, y_test: test data
+    # y_prob: predicted probabilities from trained model
+    # y_test: actual y labels
     # threshold_step: granularity with which to test out various classification thresholds
     # Returns (fc_threshold, kd_threshold).
         # If predicted score < fc_threshold, then predict FC
         # If predicted score > kd_threshold, then predict KD
         # If predicted score b/w (fc_threshold, kd_threshold), then indeterminate
-def get_fc_kd_thresholds(model, x_test, y_test, threshold_step=0.001):
+def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
     thresholds = np.arange(0.0, 1.0, step=threshold_step) # which thresholds to try
     valid_thresholds_ppv = [] # thresholds where PPV >= 0.95
     valid_thresholds_npv = [] # thresholds where NPV >= 0.95
     
-    for threshold in thresholds:
-        y_pred = model.predict(x_test, threshold=threshold)
+    for threshold in thresholds: # Iterate over possible thresholds (TODO: binary search?)
+        y_pred = apply_threshold(y_prob, threshold)
         tn, fp, fn, tp = compute_confusion(y_pred, y_test)
-        ppv = tp / (tp + fp) # PPV: positive predictive value
-        npv = tn / (tn + fn) # NPV: negative predictive value
+        try: ppv = tp / (tp + fp) # PPV: positive predictive value
+        except: ppv = -1
+        try: npv = tn / (tn + fn) # NPV: negative predictive value
+        except: npv = -1
         if ppv >= 0.95: 
             valid_thresholds_ppv.append(threshold)
         if npv >= 0.95:
@@ -53,26 +77,51 @@ def get_fc_kd_thresholds(model, x_test, y_test, threshold_step=0.001):
     fc_threshold = max(valid_thresholds_npv) # highest threshold below which NPV >= 0.95 (predict FC)
     return (fc_threshold, kd_threshold)
 
+# Get TN, FP, FN, TP, Indeterminates for given y_prob and y_test
+def compute_indeterminate_confusion(y_prob, y_test):
+    # Threshold y_prob, get predictions
+    fc_threshold, kd_threshold = get_fc_kd_thresholds(y_prob, y_test)
+    fc_binary = np.array(y_prob <= fc_threshold).astype(np.int32) # where y_prob <= fc_threshold
+    kd_binary = np.array(y_prob >= kd_threshold).astype(np.int32) # where y_prob >= kd_threshold
+    indeterminate_binary = np.array(np.logical_and(y_prob > fc_threshold, y_prob < kd_threshold)).astype(np.int32)
+
+    # Get TP, TN, FP, FN, Indeterminates
+    true_negatives = np.sum(fc_binary * (1 - y_test)) # fc_binary = 1 and y_test = 0
+    false_positives = np.sum(kd_binary * (1 - y_test)) # kd_binary = 1 and y_test = 0
+    false_negatives = np.sum(fc_binary * y_test) # fc_binary = 1 and y_test = 1
+    true_positives = np.sum(kd_binary * y_test) # kd_binary = 1 and y_test = 1
+    fc_indeterminate = np.sum(indeterminate_binary * (1 - y_test)) # indeterminate_binary = 1 and y_test = 0
+    kd_indeterminate = np.sum(indeterminate_binary * y_test) # indeterminate_binary = 1 and y_test = 1
+
+    return (true_negatives, false_positives, false_negatives, true_positives, fc_indeterminate, kd_indeterminate)
+
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
-def test_model(model, x, y, threshold=0.5):
+def test_model(model, x, y, threshold=0.5, allow_indeterminates=False):
     stats_arr = []
     best_scores = []
     roc_curves = []
     kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=90007)
     for train_idx, test_idx in kf.split(x, y):
+        # Unpack CV split
         x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+        # Train and predict
         best_score = model.train(x_train, y_train)
         best_scores.append(best_score)
         y_prob = model.predict_proba(x_test)
         y_pred = model.predict(x_test, threshold=threshold)
+        # Get ROC curve
         roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
         roc_curves.append(roc)
-        stats_arr.append(compute_confusion(y_pred, y_test)) # confusion info info
-        # TODO: call get_fc_kd_thresholds using x_test and y_test, get num. indeterminates
-    print('CV Confusion: ', [stats.tolist() for stats in stats_arr])
+        # Confusion info
+        if allow_indeterminates == False:
+            stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix
+        else:
+            stats_arr.append(compute_indeterminate_confusion(y_prob, y_test)) # confusion matrix with indeterminates
+
+    print('CV Confusion: ', stats_arr)
     print('Best CV scores: ', np.around(best_scores, decimals=4))
     print('Avg best scores: ', np.mean(best_scores))
-    explain_confusion(np.mean(stats_arr, axis=0))
+    explain_confusion(np.sum(stats_arr, axis=0), indeterminates=allow_indeterminates)
     return roc_curves
 
 # Plot ROC Curves from K-Fold CV, show mean, variance across K-folds
@@ -153,7 +202,7 @@ class ScikitModel:
     # Predict on x_test, return binary y_pred
     def predict(self, x_test, threshold=0.5):
         y_prob = self.paramsearch.predict_proba(x_test)[:, 1] # probability of KD
-        y_pred = np.array(y_prob >= threshold).astype(np.int32) # thresholding
+        y_pred = apply_threshold(y_prob, threshold)
         return y_pred
 
     # Train on x_train and y_train, and predict on x_test
