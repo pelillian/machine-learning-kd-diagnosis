@@ -20,7 +20,7 @@ def compute_confusion(y_pred, y_test):
     return confusion.flatten().tolist()
 
 # Explain TN, FP, FN, TP
-    # Stats = (TN, FP, FN, TP) OR (TN, FP, FN, TP, Indeterminates)
+    # Stats = (TN, FP, FN, TP) OR (TN, FP, FN, TP, fc_indeterminate, kd_indeterminate)
 def explain_confusion(stats, indeterminates=False):
     if indeterminates == False:
         fc_total = stats[0] + stats[1]
@@ -50,6 +50,8 @@ def explain_confusion(stats, indeterminates=False):
         print("FC left indeterminate: " + str(fc_indeterminate) + ", (" + str(pct_fc_indeterminate) + " %)")
         pct_kd_indeterminate = (kd_indeterminate/kd_total) * 100
         print("KD left indeterminate: " + str(kd_indeterminate) + ", (" + str(pct_kd_indeterminate) + " %)")
+        print("Avg specificity: " + str(stats[3]/(stats[3]+stats[2]))) # TP/(TP+FN)
+        print("Avg sensitivity: " + str(stats[0]/(stats[0]+stats[1[]]))) # TN/(TN+FP)
 
 # Return thresholds corresponding to PPV >= 0.95 (predict KD) and NPV >= 0.95 (predict FC)
     # y_prob: predicted probabilities from trained model
@@ -79,7 +81,7 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
     fc_threshold = max(valid_thresholds_npv) # highest threshold below which NPV >= 0.95 (predict FC)
     return (fc_threshold, kd_threshold)
 
-# Get TN, FP, FN, TP, Indeterminates for given y_prob and y_test
+# Get TN, FP, FN, TP, fc_indeterminate, kd_indeterminate for given y_prob and y_test
 def compute_indeterminate_confusion(y_prob, y_test):
     # Threshold y_prob, get predictions
     fc_threshold, kd_threshold = get_fc_kd_thresholds(y_prob, y_test)
