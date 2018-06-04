@@ -31,6 +31,10 @@ def explain_confusion(stats):
     # model: a pre-trained ScikitModel
     # x_test, y_test: test data
     # threshold_step: granularity with which to test out various classification thresholds
+    # Returns (fc_threshold, kd_threshold).
+        # If predicted score < fc_threshold, then predict FC
+        # If predicted score > kd_threshold, then predict KD
+        # If predicted score b/w (fc_threshold, kd_threshold), then indeterminate
 def get_fc_kd_thresholds(model, x_test, y_test, threshold_step=0.001):
     thresholds = np.arange(0.0, 1.0, step=threshold_step) # which thresholds to try
     valid_thresholds_ppv = [] # thresholds where PPV >= 0.95
@@ -64,6 +68,7 @@ def test_model(model, x, y, threshold=0.5):
         roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
         roc_curves.append(roc)
         stats_arr.append(compute_confusion(y_pred, y_test)) # confusion info info
+        # TODO: call get_fc_kd_thresholds using x_test and y_test, get num. indeterminates
     print('CV Confusion: ', [stats.tolist() for stats in stats_arr])
     print('Best CV scores: ', np.around(best_scores, decimals=4))
     print('Avg best scores: ', np.mean(best_scores))
