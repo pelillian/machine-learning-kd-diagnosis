@@ -115,7 +115,8 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True
 
 # Load expanded dataset from pickle dump
 # Returns: x_all, y_all, ids_all (numpy arrays)
-def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True):
+def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
+	return_ids=True, reduced_features=False):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset_expanded.pkl','rb')
@@ -123,6 +124,13 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, return
 		f = open('./data/kd_dataset_expanded.pkl','rb')
 	x_all, y_all, ids_all = pkl.load(f)
 	f.close()
+
+	# Reduced features: 18 features only (not 26)
+	if reduced_features == True:
+		reduced_features = ['illday', 'rash', 'redeyes', 'redplt', 'clnode', \
+		'redhands', 'pwbc', 'ppolys', 'pbands', 'plymphs', 'pmonos',\
+		'peos', 'pesr', 'pcrp', 'pplts', 'palt', 'pggt', 'zhemo']
+		x_all = x_all[reduced_features] # update dataframe
 
 	# Standardize
 	if fill_mode == 'knn':
