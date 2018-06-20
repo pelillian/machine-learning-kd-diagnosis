@@ -176,7 +176,7 @@ def plot_cv_roc_curves(roc_curves):
     
 # ScikitModel wrapper class
 class ScikitModel:
-    def __init__(self, skmodel, params, random_search=True, n_iter=10, scoring='roc_auc', beta=1.0, verbose=False):
+    def __init__(self, skmodel, params, random_search=False, n_iter=10, scoring='roc_auc', beta=1.0, verbose=False):
         self.skmodel = skmodel
         self.cv_scorer = 'roc_auc' if scoring=='roc_auc' else make_scorer(fbeta_score, beta=beta)
         self.verbose = verbose
