@@ -24,6 +24,8 @@ from sklearn.svm import SVC
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+
+from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import VotingClassifier
 
 # from deepnet.deep_model import DeepKDModel
@@ -54,32 +56,33 @@ print("Scikit Models:")
 print("")
 
 # Logistic Regression
-params = {
-   'C': np.logspace(-2, 2, 5)
+lr_params = {
+	'C': np.logspace(-2, 2, 5)
 }
 if (CLASS_WEIGHT != "none"):
-	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
+	lr_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Logistic Regression")
 test_model(ScikitModel(LogisticRegression(), 
-               params=params,
-               random_search=False,
-               scoring='roc_auc',
-               verbose=True),
-       x, y,
-       allow_indeterminates=True)
+				params=lr_params,
+				random_search=False,
+				scoring='roc_auc',
+				verbose=True),
+		x, y,
+		allow_indeterminates=True
+)
 print("")
 
 # SVM/SVC
-params = {
-   'C': np.logspace(-3, 2, 100),
-   'gamma': np.logspace(-3, 2, 100),
-   'kernel': ['linear', 'rbf', 'poly']
+svc_params = {
+	'C': np.logspace(-3, 2, 100),
+	'gamma': np.logspace(-3, 2, 100),
+	'kernel': ['rbf', 'poly']
 }
 if (CLASS_WEIGHT != "none"):
-	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
+	svc_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Support Vector Classification")
 test_model(ScikitModel(SVC(probability=True),
-			params=params,
+			params=svc_params,
 			random_search=True,
 			# n_iter=25,
 			scoring='roc_auc',
@@ -89,25 +92,27 @@ test_model(ScikitModel(SVC(probability=True),
 print("")
 
 # Random Forest
-params = {
+rf_params = {
    'n_estimators': randint(50, 500),
    'max_features': randint(3, 10),
    'min_samples_split': randint(2, 50),
    'min_samples_leaf': randint(1, 40)
 }
 if (CLASS_WEIGHT != "none"):
-	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
+	rf_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Random Forest")
 test_model(ScikitModel(RandomForestClassifier(), 
-                       params=params,
-                       random_search=True,
-                       n_iter=25,
-                       scoring='roc_auc',
-                       verbose=True),
-           x, y,
-           allow_indeterminates=True)
+				params=rf_params,
+				random_search=True,
+				n_iter=25,
+				scoring='roc_auc',
+				verbose=True),
+		x, y,
+		allow_indeterminates=True
+)
 print("")
-# K-NN
+
+# # K-NN
 # params = {
 # 	'n_neighbors':[1, 2, 3, 5, 9, 17],
 # 	'leaf_size':[1,2,3,5],
@@ -119,32 +124,61 @@ print("")
 # 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 # print("K Nearest Neighbors")
 # test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
+# print("")
 
-# Ensemble
+# Bagging SVC
+bag_svm_params = {
+	'base_estimator__C': np.logspace(-3, 1.5, 100),
+	'base_estimator__gamma': np.logspace(-3, 1.5, 100),
+	'base_estimator__kernel': ['rbf', 'poly'],
+	'n_estimators': randint(5, 50),
+	"max_samples": np.logspace(-1, 1, 100),
+	"max_features": randint(1, 10),
+	"bootstrap": [True, False],
+	"bootstrap_features": [True, False]
+}
+bagger = BaggingClassifier(
+	base_estimator=SVC(probability=True)
+)
+print("Bagging Ensemble")
+test_model(ScikitModel(
+				bagger,
+				params=bag_svm_params,
+				random_search=True,
+				n_iter=50,
+				verbose=True),
+		x, y,
+		allow_indeterminates=True
+)
+
+# Voting Ensemble
 clf1 = SVC(probability=True)
 clf2 = LogisticRegression()
 clf3 = RandomForestClassifier()
 
 eclf = VotingClassifier(
     estimators=[('svm', clf1), ('lr', clf2), ('rf', clf3)],
-    voting='soft')
+    voting='soft'
+)
 
 params = {
     'svm__C': np.logspace(-3, 2, 100),
 	'svm__gamma': np.logspace(-3, 2, 100),
-	'svm__kernel': ['linear', 'rbf', 'poly'],
+	'svm__kernel': ['rbf', 'poly'],
     'lr__C': np.logspace(-3, 2, 100),
 	'rf__n_estimators': randint(50, 500),
 	'rf__max_features': randint(3, 10),
 	'rf__min_samples_split': randint(2, 50),
 	'rf__min_samples_leaf': randint(1, 40)
 }
-print("Ensemble")
+print("Voting Ensemble")
 test_model(ScikitModel(
 				eclf,
 				params,
 				random_search=True, 
 				n_iter=50, 
 				verbose=True),
-		x, y, allow_indeterminates=True)
+		x, y,
+		allow_indeterminates=True
+)
 print("")
