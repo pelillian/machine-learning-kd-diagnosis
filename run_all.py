@@ -51,51 +51,91 @@ print("Scikit Models:")
 
 # Logistic Regression
 params = {
-	# 'solver': ['newton-cg', 'lbfgs', 'liblinear', 'sag'],
-	# 'multi_class': ['ovr', 'multinomial'],
-	'C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
-	# 'penalty': ['l1', 'l2']
+   'C': np.logspace(-2, 2, 5)
 }
 if (CLASS_WEIGHT != "none"):
 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Logistic Regression")
-test_model(ScikitModel(LogisticRegression(), params), x, y)
+test_model(ScikitModel(LogisticRegression(), 
+               params=params,
+               random_search=False,
+               scoring='roc_auc',
+               verbose=True),
+       x, y,
+       allow_indeterminates=True)
 
 # SVM/SVC
 params = {
-	'C': [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
-	'gamma': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
-	'kernel': ['linear', 'rbf', 'poly']
+   'C': np.logspace(-3, 3, 100),
+   'gamma': np.logspace(-3, 3, 100),
+   'kernel': ['linear', 'rbf', 'poly']
 }
 if (CLASS_WEIGHT != "none"):
 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Support Vector Classification")
-test_model(ScikitModel(SVC(), params), x, y)
+test_model(ScikitModel(SVC(probability=True),
+			params=params,
+			random_search=True,
+			n_iter=100,
+			scoring='roc_auc',
+			verbose=True),
+		x, y,
+		allow_indeterminates=True)
 
 # Random Forest
 params = {
-	'max_features': ['auto', 'sqrt'],
-	'n_estimators': [100, 400, 1600],
-	'min_samples_leaf': [1, 2, 4],
-	'min_samples_split': [2, 6, 16],
-	'bootstrap': [True, False],
-	'max_depth': [10, 30, 80, None]
+   'n_estimators': randint(10, 500),
+   'max_features': randint(3, 15),
+   'min_samples_split': randint(2, 50),
+   'min_samples_leaf': randint(1, 50)
 }
 if (CLASS_WEIGHT != "none"):
 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 print("Random Forest")
-test_model(ScikitModel(RandomForestClassifier(), params), x, y)
+test_model(ScikitModel(RandomForestClassifier(), 
+                       params=params,
+                       random_search=True,
+                       n_iter=250,
+                       scoring='roc_auc',
+                       verbose=True),
+           x, y,
+           allow_indeterminates=True)
 
 # K-NN
-params = {
-	'n_neighbors':[1, 2, 3, 5, 9, 17],
-	'leaf_size':[1,2,3,5],
-	'weights':['uniform', 'distance'],
-	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
-	'n_jobs':[-1]
-}
-if (CLASS_WEIGHT != "none"):
-	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
-print("K Nearest Neighbors")
-test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
+# params = {
+# 	'n_neighbors':[1, 2, 3, 5, 9, 17],
+# 	'leaf_size':[1,2,3,5],
+# 	'weights':['uniform', 'distance'],
+# 	'algorithm':['auto', 'ball_tree','kd_tree','brute'],
+# 	'n_jobs':[-1]
+# }
+# if (CLASS_WEIGHT != "none"):
+# 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
+# print("K Nearest Neighbors")
+# test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
 
+# Ensemble
+clf1 = svm.SVC(probability=True)
+clf2 = linear_model.LogisticRegression()
+
+eclf = ensemble.VotingClassifier(
+    estimators=[('svm', clf1), ('lr', clf2)],
+    voting='soft')
+
+params = {
+    'svm__C': np.logspace(-3, 2, 100),
+    'svm__gamma': np.logspace(-3, 2, 100),
+    'svm__kernel': ['linear', 'rbf', 'poly'],
+    'lr__C': np.logspace(-3, 2, 100)
+}
+
+# Test model! 5-fold CV with hyperparameter optimization
+clf = 
+
+test_model(ScikitModel(
+				eclf,
+				params,
+				random_search=True, 
+				n_iter=100, 
+				verbose=True),
+		x, y, allow_indeterminates=True)
