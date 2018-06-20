@@ -12,6 +12,8 @@ import numpy as np
 
 from collections import Counter
 
+from scipy.stats import randint
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, fbeta_score
@@ -22,6 +24,7 @@ from sklearn.svm import SVC
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import VotingClassifier
 
 # from deepnet.deep_model import DeepKDModel
 # from xgbst.xgboost_model import XGBoostKDModel
@@ -45,9 +48,10 @@ x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 # Test XGBoost Model
 # test_model(XGBoostKDModel(), x, y, "XGBoost Model")
 # Our XGBoost class will not work with SMOTE because of how it loads the feature names
+# print("")
 
-print("")
 print("Scikit Models:")
+print("")
 
 # Logistic Regression
 params = {
@@ -63,11 +67,12 @@ test_model(ScikitModel(LogisticRegression(),
                verbose=True),
        x, y,
        allow_indeterminates=True)
+print("")
 
 # SVM/SVC
 params = {
-   'C': np.logspace(-3, 3, 100),
-   'gamma': np.logspace(-3, 3, 100),
+   'C': np.logspace(-3, 2, 100),
+   'gamma': np.logspace(-3, 2, 100),
    'kernel': ['linear', 'rbf', 'poly']
 }
 if (CLASS_WEIGHT != "none"):
@@ -76,18 +81,19 @@ print("Support Vector Classification")
 test_model(ScikitModel(SVC(probability=True),
 			params=params,
 			random_search=True,
-			n_iter=100,
+			# n_iter=25,
 			scoring='roc_auc',
 			verbose=True),
 		x, y,
 		allow_indeterminates=True)
+print("")
 
 # Random Forest
 params = {
-   'n_estimators': randint(10, 500),
-   'max_features': randint(3, 15),
+   'n_estimators': randint(50, 500),
+   'max_features': randint(3, 10),
    'min_samples_split': randint(2, 50),
-   'min_samples_leaf': randint(1, 50)
+   'min_samples_leaf': randint(1, 40)
 }
 if (CLASS_WEIGHT != "none"):
 	params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
@@ -95,12 +101,12 @@ print("Random Forest")
 test_model(ScikitModel(RandomForestClassifier(), 
                        params=params,
                        random_search=True,
-                       n_iter=250,
+                       n_iter=25,
                        scoring='roc_auc',
                        verbose=True),
            x, y,
            allow_indeterminates=True)
-
+print("")
 # K-NN
 # params = {
 # 	'n_neighbors':[1, 2, 3, 5, 9, 17],
@@ -115,27 +121,30 @@ test_model(ScikitModel(RandomForestClassifier(),
 # test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
 
 # Ensemble
-clf1 = svm.SVC(probability=True)
-clf2 = linear_model.LogisticRegression()
+clf1 = SVC(probability=True)
+clf2 = LogisticRegression()
+clf3 = RandomForestClassifier()
 
-eclf = ensemble.VotingClassifier(
-    estimators=[('svm', clf1), ('lr', clf2)],
+eclf = VotingClassifier(
+    estimators=[('svm', clf1), ('lr', clf2), ('rf', clf3)],
     voting='soft')
 
 params = {
     'svm__C': np.logspace(-3, 2, 100),
-    'svm__gamma': np.logspace(-3, 2, 100),
-    'svm__kernel': ['linear', 'rbf', 'poly'],
-    'lr__C': np.logspace(-3, 2, 100)
+	'svm__gamma': np.logspace(-3, 2, 100),
+	'svm__kernel': ['linear', 'rbf', 'poly'],
+    'lr__C': np.logspace(-3, 2, 100),
+	'rf__n_estimators': randint(50, 500),
+	'rf__max_features': randint(3, 10),
+	'rf__min_samples_split': randint(2, 50),
+	'rf__min_samples_leaf': randint(1, 40)
 }
-
-# Test model! 5-fold CV with hyperparameter optimization
-clf = 
-
+print("Ensemble")
 test_model(ScikitModel(
 				eclf,
 				params,
 				random_search=True, 
-				n_iter=100, 
+				n_iter=50, 
 				verbose=True),
 		x, y, allow_indeterminates=True)
+print("")

@@ -1,0 +1,1 @@
+python -u run_all.py > run_all__results.txt 2>&1
