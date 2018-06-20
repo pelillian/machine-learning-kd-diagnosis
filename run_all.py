@@ -5,7 +5,7 @@
 
 # This script runs each model with different parameters
 
-# Peter Lillian
+# Peter Lillian & Lucas Hu
 # -------------------------------------------------------------------------------------------------
 
 import numpy as np
