@@ -128,12 +128,12 @@ print("")
 
 # Bagging SVC
 bag_svm_params = {
-	'base_estimator__C': np.logspace(-3, 1.5, 100),
-	'base_estimator__gamma': np.logspace(-3, 1.5, 100),
-	'base_estimator__kernel': ['rbf', 'poly'],
+	'base_estimator__C': np.logspace(-3, 2, 100),
+	'base_estimator__gamma': np.logspace(-3, 2, 100),
+	'base_estimator__kernel': ['linear', 'rbf', 'poly'],
 	'n_estimators': randint(5, 50),
-	"max_samples": np.logspace(-1, 1, 100),
-	"max_features": randint(1, 10),
+	"max_samples": np.logspace(-1, 0, 100),
+	"max_features": randint(1, 20),
 	"bootstrap": [True, False],
 	"bootstrap_features": [True, False]
 }
