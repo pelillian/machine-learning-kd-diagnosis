@@ -77,8 +77,16 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
             valid_thresholds_ppv.append(threshold)
         if npv >= 0.95:
             valid_thresholds_npv.append(threshold)
-    kd_threshold = min(valid_thresholds_ppv) # lowest threshold past which PPV >= 0.95 (predict KD)
-    fc_threshold = max(valid_thresholds_npv) # highest threshold below which NPV >= 0.95 (predict FC)
+    try: 
+        kd_threshold = min(valid_thresholds_ppv) # lowest threshold past which PPV >= 0.95 (predict KD)
+    except: 
+        kd_threshold = 0.0
+        print('WARNING: could not find valid kd_threshold: resorting to 0.0')
+    try: 
+        fc_threshold = max(valid_thresholds_npv) # highest threshold below which NPV >= 0.95 (predict FC)
+    except: 
+        fc_threshold = 1.0
+        print('WARNING: could not find valid fc_threshold: resorting to 1.0')
     return (fc_threshold, kd_threshold)
 
 # Get TN, FP, FN, TP, fc_indeterminate, kd_indeterminate for given y_prob and y_test
@@ -100,11 +108,11 @@ def compute_indeterminate_confusion(y_prob, y_test):
     return (true_negatives, false_positives, false_negatives, true_positives, fc_indeterminate, kd_indeterminate)
 
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
-def test_model(model, x, y, threshold=0.5, allow_indeterminates=False):
+def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, random_state=90007):
     stats_arr = []
     best_scores = []
     roc_curves = []
-    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=90007)
+    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
     for train_idx, test_idx in kf.split(x, y):
         # Unpack CV split
         x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
