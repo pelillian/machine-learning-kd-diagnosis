@@ -85,7 +85,7 @@ print("Support Vector Classification")
 test_model(ScikitModel(SVC(probability=True),
 			params=svc_params,
 			random_search=True,
-			n_iter=50,
+			n_iter=25,
 			scoring='roc_auc',
 			verbose=True),
 		x, y,
@@ -150,7 +150,8 @@ test_model(ScikitModel(
 		bagging_lr,
 		params=bag_lr_params,
 		random_search=True,
-		n_iter=50,
+		n_iter=25,
+		n_jobs=-1,
 		verbose=1),
 	x, y,
 	allow_indeterminates=True
@@ -163,6 +164,7 @@ bag_svm_params = {
 	'base_estimator__C': np.logspace(-3, 2, 100),
 	'base_estimator__gamma': np.logspace(-3, 2, 100),
 	'base_estimator__kernel': ['linear', 'rbf', 'poly'],
+	'base_estimator__probability': [True, False],
 	'n_estimators': randint(5, 50),
 	"max_samples": np.logspace(-0.9, 0, 100),
 	"max_features": randint(10, x.shape[1]),
@@ -170,7 +172,7 @@ bag_svm_params = {
 	"bootstrap_features": [True, False]
 }
 bagging_svc = BaggingClassifier(
-	base_estimator=SVC(probability=True),
+	base_estimator=SVC(),
 	n_jobs=-1
 )
 print("SVC Bagging")
@@ -178,7 +180,8 @@ test_model(ScikitModel(
 				bagging_svc,
 				params=bag_svm_params,
 				random_search=True,
-				n_iter=50,
+				n_iter=25,
+				n_jobs=-1,
 				verbose=1),
 		x, y,
 		allow_indeterminates=True
@@ -214,7 +217,8 @@ test_model(ScikitModel(
 				eclf,
 				eclf_params,
 				random_search=True, 
-				n_iter=50, 
+				n_iter=25,
+				n_jobs=-1,
 				verbose=True),
 		x, y,
 		allow_indeterminates=True

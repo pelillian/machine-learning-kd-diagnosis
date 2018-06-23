@@ -146,7 +146,7 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
 	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
 
 	# Convert to numpy.ndarray
-	y_array = y_all.as_matrix()
-	ids_array = ids_all.as_matrix()
+	y_array = y_all.values
+	ids_array = ids_all.values
 
 	return (x_filled, y_array, ids_array)
