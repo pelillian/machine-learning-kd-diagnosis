@@ -135,7 +135,7 @@ print()
 # Bagging Logistic Regression
 bag_lr_params = {
 	'base_estimator__C':np.logspace(-2, 2, 5),
-	'n_estimators':randint(5, 50)
+	'n_estimators':randint(5, 50),
 	'max_samples':np.logspace(-0.9, 0, 100),
 	'max_features':randint(10, x.shape[1]),
 	'bootstrap':[True, False],
