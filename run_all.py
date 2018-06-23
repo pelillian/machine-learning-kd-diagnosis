@@ -137,12 +137,12 @@ bag_lr_params = {
 	'base_estimator__C':np.logspace(-2, 2, 5),
 	'n_estimators':randint(5, 50),
 	'max_samples':np.logspace(-0.9, 0, 100),
-	'max_features':randint(10, x.shape[1]),
-	'bootstrap':[True, False],
-	'bootstrap_features':[True, False]
+	'max_features':randint(10, x.shape[1])
 }
 bagging_lr = BaggingClassifier(
 	base_estimator=LogisticRegression(),
+	bootstrap=True,
+	bootstrap_features=False,
 	n_jobs=-1
 )
 print("Logistic Regression Bagging")
@@ -166,12 +166,12 @@ bag_svm_params = {
 	'base_estimator__probability': [True, False],
 	'n_estimators': randint(5, 50),
 	"max_samples": np.logspace(-0.9, 0, 100),
-	"max_features": randint(10, x.shape[1]),
-	"bootstrap": [True, False],
-	"bootstrap_features": [True, False]
+	"max_features": randint(10, x.shape[1])
 }
 bagging_svc = BaggingClassifier(
 	base_estimator=SVC(),
+	bootstrap=True,
+	bootstrap_features=False,
 	n_jobs=-1
 )
 print("SVC Bagging")
