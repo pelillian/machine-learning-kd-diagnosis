@@ -151,7 +151,6 @@ test_model(ScikitModel(
 		params=bag_lr_params,
 		random_search=True,
 		n_iter=25,
-		n_jobs=-1,
 		verbose=1),
 	x, y,
 	allow_indeterminates=True
@@ -181,7 +180,6 @@ test_model(ScikitModel(
 				params=bag_svm_params,
 				random_search=True,
 				n_iter=25,
-				n_jobs=-1,
 				verbose=1),
 		x, y,
 		allow_indeterminates=True
@@ -200,7 +198,8 @@ eclf = VotingClassifier(
     	('lr', clf2)
     	# ('rf', clf3)
     ],
-    voting='soft'
+    voting='soft',
+    n_jobs=-1
 )
 eclf_params = {
     'svm__C': np.logspace(-3, 2, 100),
@@ -218,7 +217,6 @@ test_model(ScikitModel(
 				eclf_params,
 				random_search=True, 
 				n_iter=25,
-				n_jobs=-1,
 				verbose=True),
 		x, y,
 		allow_indeterminates=True
