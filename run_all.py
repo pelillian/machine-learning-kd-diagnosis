@@ -85,7 +85,7 @@ print("Support Vector Classification")
 test_model(ScikitModel(SVC(probability=True),
 			params=svc_params,
 			random_search=True,
-			n_iter=25,
+			n_iter=50,
 			scoring='roc_auc',
 			verbose=True),
 		x, y,
@@ -150,8 +150,8 @@ test_model(ScikitModel(
 		bagging_lr,
 		params=bag_lr_params,
 		random_search=True,
-		n_iter=10,
-		verbose=2),
+		n_iter=50,
+		verbose=1),
 	x, y,
 	allow_indeterminates=True
 )
@@ -178,8 +178,8 @@ test_model(ScikitModel(
 				bagging_svc,
 				params=bag_svm_params,
 				random_search=True,
-				n_iter=10,
-				verbose=2),
+				n_iter=50,
+				verbose=1),
 		x, y,
 		allow_indeterminates=True
 )
@@ -214,7 +214,7 @@ test_model(ScikitModel(
 				eclf,
 				eclf_params,
 				random_search=True, 
-				n_iter=25, 
+				n_iter=50, 
 				verbose=True),
 		x, y,
 		allow_indeterminates=True
