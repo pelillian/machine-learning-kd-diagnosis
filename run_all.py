@@ -70,13 +70,14 @@ test_model(ScikitModel(LogisticRegression(),
 		x, y,
 		allow_indeterminates=True
 )
-print("")
+print()
+
 
 # SVM/SVC
 svc_params = {
 	'C': np.logspace(-3, 2, 100),
 	'gamma': np.logspace(-3, 2, 100),
-	'kernel': ['rbf', 'poly']
+	'kernel': ['linear', 'rbf', 'poly']
 }
 if (CLASS_WEIGHT != "none"):
 	svc_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
@@ -84,33 +85,36 @@ print("Support Vector Classification")
 test_model(ScikitModel(SVC(probability=True),
 			params=svc_params,
 			random_search=True,
-			# n_iter=25,
+			n_iter=25,
 			scoring='roc_auc',
 			verbose=True),
 		x, y,
 		allow_indeterminates=True)
-print("")
+print()
+
+
 
 # Random Forest
-rf_params = {
-   'n_estimators': randint(50, 500),
-   'max_features': randint(3, 10),
-   'min_samples_split': randint(2, 50),
-   'min_samples_leaf': randint(1, 40)
-}
-if (CLASS_WEIGHT != "none"):
-	rf_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
-print("Random Forest")
-test_model(ScikitModel(RandomForestClassifier(), 
-				params=rf_params,
-				random_search=True,
-				n_iter=25,
-				scoring='roc_auc',
-				verbose=True),
-		x, y,
-		allow_indeterminates=True
-)
-print("")
+# rf_params = {
+#    'n_estimators': randint(50, 500),
+#    'max_features': randint(3, 10),
+#    'min_samples_split': randint(2, 50),
+#    'min_samples_leaf': randint(1, 40)
+# }
+# if (CLASS_WEIGHT != "none"):
+# 	rf_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
+# print("Random Forest")
+# test_model(ScikitModel(RandomForestClassifier(), 
+# 				params=rf_params,
+# 				random_search=True,
+# 				n_iter=25,
+# 				scoring='roc_auc',
+# 				verbose=True),
+# 		x, y,
+# 		allow_indeterminates=True
+# )
+# print()
+
 
 # # K-NN
 # params = {
@@ -126,59 +130,93 @@ print("")
 # test_model(ScikitModel(KNeighborsClassifier(4), params), x, y)
 # print("")
 
+
+
+# Bagging Logistic Regression
+bag_lr_params = {
+	'base_estimator__C':np.logspace(-2, 2, 5),
+	'n_estimators':randint(5, 50)
+	'max_samples':np.logspace(-0.9, 0, 100),
+	'max_features':randint(10, x.shape[1]),
+	'bootstrap':[True, False],
+	'bootstrap_features':[True, False]
+}
+bagging_lr = BaggingClassifier(
+	base_estimator=LogisticRegression(),
+	n_jobs=-1
+)
+print("Logistic Regression Bagging")
+test_model(ScikitModel(
+		bagging_lr,
+		params=bag_lr_params,
+		random_search=True,
+		n_iter=10,
+		verbose=2),
+	x, y,
+	allow_indeterminates=True
+)
+print()
+
+
 # Bagging SVC
 bag_svm_params = {
 	'base_estimator__C': np.logspace(-3, 2, 100),
 	'base_estimator__gamma': np.logspace(-3, 2, 100),
 	'base_estimator__kernel': ['linear', 'rbf', 'poly'],
 	'n_estimators': randint(5, 50),
-	"max_samples": np.logspace(-1, 0, 100),
-	"max_features": randint(1, 20),
+	"max_samples": np.logspace(-0.9, 0, 100),
+	"max_features": randint(10, x.shape[1]),
 	"bootstrap": [True, False],
 	"bootstrap_features": [True, False]
 }
-bagger = BaggingClassifier(
-	base_estimator=SVC(probability=True)
+bagging_svc = BaggingClassifier(
+	base_estimator=SVC(probability=True),
+	n_jobs=-1
 )
-print("Bagging Ensemble")
+print("SVC Bagging")
 test_model(ScikitModel(
-				bagger,
+				bagging_svc,
 				params=bag_svm_params,
 				random_search=True,
-				n_iter=50,
-				verbose=True),
+				n_iter=10,
+				verbose=2),
 		x, y,
 		allow_indeterminates=True
 )
+print()
+
 
 # Voting Ensemble
 clf1 = SVC(probability=True)
 clf2 = LogisticRegression()
-clf3 = RandomForestClassifier()
+# clf3 = RandomForestClassifier()
 
 eclf = VotingClassifier(
-    estimators=[('svm', clf1), ('lr', clf2), ('rf', clf3)],
+    estimators=[
+    	('svm', clf1), 
+    	('lr', clf2)
+    	# ('rf', clf3)
+    ],
     voting='soft'
 )
-
-params = {
+eclf_params = {
     'svm__C': np.logspace(-3, 2, 100),
 	'svm__gamma': np.logspace(-3, 2, 100),
 	'svm__kernel': ['rbf', 'poly'],
-    'lr__C': np.logspace(-3, 2, 100),
-	'rf__n_estimators': randint(50, 500),
-	'rf__max_features': randint(3, 10),
-	'rf__min_samples_split': randint(2, 50),
-	'rf__min_samples_leaf': randint(1, 40)
+    'lr__C': np.logspace(-3, 2, 100)
+	# 'rf__n_estimators': randint(50, 500),
+	# 'rf__max_features': randint(3, 10),
+	# 'rf__min_samples_split': randint(2, 50),
+	# 'rf__min_samples_leaf': randint(1, 40)
 }
 print("Voting Ensemble")
 test_model(ScikitModel(
 				eclf,
-				params,
+				eclf_params,
 				random_search=True, 
-				n_iter=50, 
+				n_iter=25, 
 				verbose=True),
 		x, y,
 		allow_indeterminates=True
 )
-print("")
+print()

@@ -176,7 +176,7 @@ def plot_cv_roc_curves(roc_curves):
     
 # ScikitModel wrapper class
 class ScikitModel:
-    def __init__(self, skmodel, params, random_search=False, n_iter=10, scoring='roc_auc', beta=1.0, verbose=False):
+    def __init__(self, skmodel, params, random_search=False, n_iter=10, scoring='roc_auc', beta=1.0, n_jobs=1, verbose=False):
         self.skmodel = skmodel
         self.cv_scorer = 'roc_auc' if scoring=='roc_auc' else make_scorer(fbeta_score, beta=beta)
         self.verbose = verbose
@@ -184,16 +184,18 @@ class ScikitModel:
             self.paramsearch = RandomizedSearchCV(self.skmodel, params, cv=5, 
                                         n_iter=n_iter,
                                         scoring=self.cv_scorer, 
-                                        verbose=verbose)
+                                        verbose=verbose,
+                                        n_jobs=n_jobs)
         else: # Regular grid search
             self.paramsearch = GridSearchCV(self.skmodel, params, cv=5,
                                         scoring=self.cv_scorer, 
-                                        verbose=verbose)
+                                        verbose=verbose,
+                                        n_jobs=n_jobs)
         
     # Run CV fit on x_train, y_train
     def train(self, x_train, y_train):
         self.paramsearch.fit(x_train, y_train)
-        if self.verbose == True:
+        if self.verbose >= 1:
             print('Best params: ', self.paramsearch.best_params_)
             print('Best score: ', self.paramsearch.best_score_)
         return self.paramsearch.best_score_ # return ROC-AUC or f-beta
