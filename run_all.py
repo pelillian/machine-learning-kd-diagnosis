@@ -27,6 +27,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import VotingClassifier
+import xgboost as xgb
 
 # from deepnet.deep_model import DeepKDModel
 # from xgbst.xgboost_model import XGBoostKDModel
@@ -38,6 +39,7 @@ from preprocess import load_data
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "none" # set to "none" or "balanced"
 USE_SMOTE = True
+RANDOM_STATE = 90007 # TODO: change this and re-run. (Loop script?)
 
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
@@ -52,10 +54,12 @@ x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 # Our XGBoost class will not work with SMOTE because of how it loads the feature names
 # print("")
 
+
 print("Scikit Models:")
 print("")
 
-# Logistic Regression
+
+#### Logistic Regression ###
 lr_params = {
 	'C': np.logspace(-2, 2, 5)
 }
@@ -68,12 +72,13 @@ test_model(ScikitModel(LogisticRegression(),
 				scoring='roc_auc',
 				verbose=True),
 		x, y,
-		allow_indeterminates=True
+		allow_indeterminates=True,
+		random_state=RANDOM_STATE
 )
 print()
 
 
-# SVM/SVC
+### SVM/SVC ###
 svc_params = {
 	'C': np.logspace(-3, 2, 100),
 	'gamma': np.logspace(-3, 2, 100),
@@ -89,12 +94,13 @@ test_model(ScikitModel(SVC(probability=True),
 			scoring='roc_auc',
 			verbose=True),
 		x, y,
-		allow_indeterminates=True)
+		allow_indeterminates=True,
+		random_state=RANDOM_STATE)
 print()
 
 
 
-# Random Forest
+# ### Random Forest ###
 # rf_params = {
 #    'n_estimators': randint(50, 500),
 #    'max_features': randint(3, 10),
@@ -116,7 +122,33 @@ print()
 # print()
 
 
-# # K-NN
+#### XGBoost ###
+xgb_params = {
+	'n_estimators': randint(50, 500),
+	'max_depth': randint(3, 10),
+	'learning_rate': np.logspace(-2, 0, 100),
+	'min_child_weight': randint(1, 10),
+	'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+	'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+}
+print('XGBoost')
+test_model(ScikitModel(
+		xgb.XGBClassifier(
+			n_jobs=-1
+		),
+		params=xgb_params,
+		random_search=True,
+		n_iter=25,
+		scoring='roc_auc',
+		verbose=True),
+	x, y,
+	allow_indeterminates=True,
+	random_state=RANDOM_STATE
+)
+print()
+
+
+# ### K-NN ###
 # params = {
 # 	'n_neighbors':[1, 2, 3, 5, 9, 17],
 # 	'leaf_size':[1,2,3,5],
@@ -132,7 +164,7 @@ print()
 
 
 
-# Bagging Logistic Regression
+### Bagging Logistic Regression ###
 bag_lr_params = {
 	'base_estimator__C':np.logspace(-2, 2, 5),
 	'n_estimators':randint(5, 50),
@@ -153,12 +185,13 @@ test_model(ScikitModel(
 		n_iter=25,
 		verbose=1),
 	x, y,
-	allow_indeterminates=True
+	allow_indeterminates=True,
+	random_state=RANDOM_STATE
 )
 print()
 
 
-# Bagging SVC
+### Bagging SVC ###
 bag_svm_params = {
 	'base_estimator__C': np.logspace(-3, 2, 100),
 	'base_estimator__gamma': np.logspace(-3, 2, 100),
@@ -176,18 +209,19 @@ bagging_svc = BaggingClassifier(
 )
 print("SVC Bagging")
 test_model(ScikitModel(
-				bagging_svc,
-				params=bag_svm_params,
-				random_search=True,
-				n_iter=25,
-				verbose=1),
-		x, y,
-		allow_indeterminates=True
+		bagging_svc,
+		params=bag_svm_params,
+		random_search=True,
+		n_iter=25,
+		verbose=1),
+	x, y,
+	allow_indeterminates=True,
+	random_state=RANDOM_STATE
 )
 print()
 
 
-# Voting Ensemble
+### Voting Ensemble ###
 clf1 = SVC(probability=True)
 clf2 = LogisticRegression()
 # clf3 = RandomForestClassifier()
@@ -213,12 +247,13 @@ eclf_params = {
 }
 print("Voting Ensemble")
 test_model(ScikitModel(
-				eclf,
-				eclf_params,
-				random_search=True, 
-				n_iter=25,
-				verbose=True),
-		x, y,
-		allow_indeterminates=True
+		eclf,
+		eclf_params,
+		random_search=True, 
+		n_iter=25,
+		verbose=True),
+	x, y,
+	allow_indeterminates=True,
+	random_state=RANDOM_STATE
 )
 print()
