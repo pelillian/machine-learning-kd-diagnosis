@@ -224,13 +224,13 @@ print()
 ### Voting Ensemble ###
 clf1 = SVC(probability=True)
 clf2 = LogisticRegression()
-# clf3 = RandomForestClassifier()
+clf3 = xgb.XGBClassifier(n_jobs=-1)
 
 eclf = VotingClassifier(
     estimators=[
     	('svm', clf1), 
     	('lr', clf2)
-    	# ('rf', clf3)
+    	('xgb', clf3)
     ],
     voting='soft',
     n_jobs=-1
@@ -239,11 +239,13 @@ eclf_params = {
     'svm__C': np.logspace(-3, 2, 100),
 	'svm__gamma': np.logspace(-3, 2, 100),
 	'svm__kernel': ['rbf', 'poly'],
-    'lr__C': np.logspace(-3, 2, 100)
-	# 'rf__n_estimators': randint(50, 500),
-	# 'rf__max_features': randint(3, 10),
-	# 'rf__min_samples_split': randint(2, 50),
-	# 'rf__min_samples_leaf': randint(1, 40)
+    'lr__C': np.logspace(-3, 2, 100),
+	'xgb__n_estimators': randint(50, 500),
+	'xgb__max_depth': randint(3, 10),
+	'xgb__learning_rate': np.logspace(-2, 0, 100),
+	'xgb__min_child_weight': randint(1, 5),
+	'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+	'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 }
 print("Voting Ensemble")
 test_model(ScikitModel(
