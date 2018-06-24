@@ -127,7 +127,7 @@ xgb_params = {
 	'n_estimators': randint(50, 500),
 	'max_depth': randint(3, 10),
 	'learning_rate': np.logspace(-2, 0, 100),
-	'min_child_weight': randint(1, 10),
+	'min_child_weight': randint(1, 5),
 	'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 	'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 }
