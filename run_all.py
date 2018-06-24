@@ -40,6 +40,7 @@ BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "none" # set to "none" or "balanced"
 USE_SMOTE = True
 RANDOM_STATE = 90007 # TODO: change this and re-run. (Loop script?)
+N_JOBS = 1
 
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
@@ -134,7 +135,7 @@ xgb_params = {
 print('XGBoost')
 test_model(ScikitModel(
 		xgb.XGBClassifier(
-			n_jobs=-1
+			n_jobs=N_JOBS
 		),
 		params=xgb_params,
 		random_search=True,
@@ -175,7 +176,7 @@ bagging_lr = BaggingClassifier(
 	base_estimator=LogisticRegression(),
 	bootstrap=True,
 	bootstrap_features=False,
-	n_jobs=-1
+	n_jobs=N_JOBS
 )
 print("Logistic Regression Bagging")
 test_model(ScikitModel(
@@ -205,7 +206,7 @@ bagging_svc = BaggingClassifier(
 	base_estimator=SVC(),
 	bootstrap=True,
 	bootstrap_features=False,
-	n_jobs=-1
+	n_jobs=N_JOBS
 )
 print("SVC Bagging")
 test_model(ScikitModel(
@@ -224,7 +225,7 @@ print()
 ### Voting Ensemble ###
 clf1 = SVC(probability=True)
 clf2 = LogisticRegression()
-clf3 = xgb.XGBClassifier(n_jobs=-1)
+clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
 
 eclf = VotingClassifier(
     estimators=[
@@ -233,7 +234,7 @@ eclf = VotingClassifier(
     	('xgb', clf3)
     ],
     voting='soft',
-    n_jobs=-1
+    n_jobs=N_JOBS
 )
 eclf_params = {
     'svm__C': np.logspace(-3, 2, 100),
