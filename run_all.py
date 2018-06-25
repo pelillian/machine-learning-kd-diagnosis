@@ -230,7 +230,7 @@ clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
 eclf = VotingClassifier(
     estimators=[
     	('svm', clf1), 
-    	('lr', clf2)
+    	('lr', clf2),
     	('xgb', clf3)
     ],
     voting='soft',
