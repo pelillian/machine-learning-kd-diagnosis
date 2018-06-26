@@ -33,6 +33,8 @@ def explain_confusion(stats, indeterminates=False):
         print("KD Classified as FC: " + str(stats[2]) + ", (" + str(kd_as_fc) + " %)")
         kd_as_kd = (stats[3] / kd_total) * 100
         print("KD Classified as KD: " + str(stats[3]) + ", (" + str(kd_as_kd) + " %)")
+        print("Avg sensitivity: " + str(stats[3]/(stats[3]+stats[2]))) # TP/(TP+FN)
+        print("Avg specificity: " + str(stats[0]/(stats[0]+stats[1]))) # TN/(TN+FP)
     else:
         fc_indeterminate = stats[4]
         kd_indeterminate = stats[5]
