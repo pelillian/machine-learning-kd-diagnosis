@@ -136,7 +136,7 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, random_st
     print('Best CV scores: ', np.around(best_scores, decimals=4))
     print('Avg best scores: ', np.mean(best_scores))
     explain_confusion(np.sum(stats_arr, axis=0), indeterminates=allow_indeterminates)
-    return roc_curves
+    return np.mean(best_scores) # mean ROCAUC
 
 # Plot ROC Curves from K-Fold CV, show mean, variance across K-folds
     # Takes in a list of (fpr-array, tpr-array, threshold-array) tuples

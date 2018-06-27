@@ -9,10 +9,10 @@
 # -------------------------------------------------------------------------------------------------
 
 import numpy as np
+from scipy.stats import randint
 
 from collections import Counter
-
-from scipy.stats import randint
+import json
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
@@ -22,11 +22,8 @@ from imblearn.over_sampling import SMOTE
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-
-from sklearn.ensemble import BaggingClassifier
-from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, VotingClassifier
 import xgboost as xgb
 
 # from deepnet.deep_model import DeepKDModel
@@ -38,28 +35,20 @@ from preprocess import load_data
 # Beta for fbeta_score
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "none" # set to "none" or "balanced"
-USE_SMOTE = True
-RANDOM_STATES = [90007, 0, 2018, 525, 7]
+USE_SMOTE = False
+RANDOM_STATES = [90007, 0, 2018, 525, 7, 10, 777, 16, 99, 2048]
 N_JOBS = 1
+ALLOW_INDETERMINATES = False
 
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 
-# print("Our Models:")
+results_dict = {}
 
-# Test DNN Model
-# test_model(DeepKDModel(), x, y, "Deep Model")
-
-# Test XGBoost Model
-# test_model(XGBoostKDModel(), x, y, "XGBoost Model")
-# Our XGBoost class will not work with SMOTE because of how it loads the feature names
-# print("")
-
-
+### RUN EXPERIMENTS ###
 for random_state in RANDOM_STATES:
 
-	print("------- SCIKIT MODELS -------")
-	print("random_state: ", random_state)
+	print("------- RANDOM STATE: {} -------".format(random_state))
 	print("")
 
 
@@ -70,15 +59,17 @@ for random_state in RANDOM_STATES:
 	if (CLASS_WEIGHT != "none"):
 		lr_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 	print("Logistic Regression")
-	test_model(ScikitModel(LogisticRegression(), 
+	avg_rocauc = test_model(ScikitModel(LogisticRegression(), 
 					params=lr_params,
 					random_search=False,
 					scoring='roc_auc',
 					verbose=True),
-			x, y,
-			allow_indeterminates=True,
-			random_state=random_state
-	)
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'lr' not in results_dict:
+		results_dict['lr'] = []
+	results_dict['lr'].append(avg_rocauc)
 	print()
 
 
@@ -91,17 +82,19 @@ for random_state in RANDOM_STATES:
 	if (CLASS_WEIGHT != "none"):
 		svc_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 	print("Support Vector Classification")
-	test_model(ScikitModel(SVC(probability=True),
-				params=svc_params,
-				random_search=True,
-				n_iter=25,
-				scoring='roc_auc',
-				verbose=True),
-			x, y,
-			allow_indeterminates=True,
-			random_state=random_state)
+	avg_rocauc = test_model(ScikitModel(SVC(probability=True),
+					params=svc_params,
+					random_search=True,
+					n_iter=25,
+					scoring='roc_auc',
+					verbose=True),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'svc' not in results_dict:
+		results_dict['svc'] = []
+	results_dict['svc'].append(avg_rocauc)
 	print()
-
 
 
 	# ### Random Forest ###
@@ -121,7 +114,7 @@ for random_state in RANDOM_STATES:
 	# 				scoring='roc_auc',
 	# 				verbose=True),
 	# 		x, y,
-	# 		allow_indeterminates=True
+	# 		allow_indeterminates=ALLOW_INDETERMINATES
 	# )
 	# print()
 
@@ -136,19 +129,21 @@ for random_state in RANDOM_STATES:
 		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 	print('XGBoost')
-	test_model(ScikitModel(
-			xgb.XGBClassifier(
-				n_jobs=N_JOBS
-			),
-			params=xgb_params,
-			random_search=True,
-			n_iter=25,
-			scoring='roc_auc',
-			verbose=True),
-		x, y,
-		allow_indeterminates=True,
-		random_state=random_state
-	)
+	avg_rocauc = test_model(ScikitModel(
+					xgb.XGBClassifier(
+						n_jobs=N_JOBS
+					),
+					params=xgb_params,
+					random_search=True,
+					n_iter=25,
+					scoring='roc_auc',
+					verbose=True),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'xgb' not in results_dict:
+		results_dict['xgb'] = []
+	results_dict['xgb'].append(avg_rocauc)
 	print()
 
 
@@ -167,7 +162,6 @@ for random_state in RANDOM_STATES:
 	# print("")
 
 
-
 	### Bagging Logistic Regression ###
 	bag_lr_params = {
 		'base_estimator__C':np.logspace(-2, 2, 5),
@@ -182,16 +176,18 @@ for random_state in RANDOM_STATES:
 		n_jobs=N_JOBS
 	)
 	print("Logistic Regression Bagging")
-	test_model(ScikitModel(
-			bagging_lr,
-			params=bag_lr_params,
-			random_search=True,
-			n_iter=25,
-			verbose=1),
-		x, y,
-		allow_indeterminates=True,
-		random_state=random_state
-	)
+	avg_rocauc = test_model(ScikitModel(
+					bagging_lr,
+					params=bag_lr_params,
+					random_search=True,
+					n_iter=25,
+					verbose=1),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'lr_bag' not in results_dict:
+		results_dict['lr_bag'] = []
+	results_dict['lr_bag'].append(avg_rocauc)
 	print()
 
 
@@ -212,16 +208,18 @@ for random_state in RANDOM_STATES:
 		n_jobs=N_JOBS
 	)
 	print("SVC Bagging")
-	test_model(ScikitModel(
-			bagging_svc,
-			params=bag_svm_params,
-			random_search=True,
-			n_iter=25,
-			verbose=1),
-		x, y,
-		allow_indeterminates=True,
-		random_state=random_state
-	)
+	avg_rocauc = test_model(ScikitModel(
+					bagging_svc,
+					params=bag_svm_params,
+					random_search=True,
+					n_iter=25,
+					verbose=1),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'svc_bag' not in results_dict:
+		results_dict['svc_bag'] = []
+	results_dict['svc_bag'].append(avg_rocauc)
 	print()
 
 
@@ -252,16 +250,36 @@ for random_state in RANDOM_STATES:
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 	print("Voting Ensemble")
-	test_model(ScikitModel(
-			eclf,
-			eclf_params,
-			random_search=True, 
-			n_iter=25,
-			verbose=True),
-		x, y,
-		allow_indeterminates=True,
-		random_state=random_state
-	)
+	avg_rocauc = test_model(ScikitModel(
+					eclf,
+					eclf_params,
+					random_search=True, 
+					n_iter=25,
+					verbose=True),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state)
+	if 'voting_clf' not in results_dict:
+		results_dict['voting_clf'] = []
+	results_dict['voting_clf'].append(avg_rocauc)
 	print()
 
 	print()
+
+
+
+### SUMMARIZE RESULTS ###
+print('\n---------- SUMMARY OF RESULTS ----------\n')
+print('Num. random seeds tested: {}'.format(len(RANDOM_STATES)))
+print('Average of average best scores:')
+print()
+
+for model, results_list in results_dict.items():
+	avg_rocauc = np.mean(results_list)
+	print('{}: {}'.format(model, avg_rocauc))
+
+with open('results_json.txt', 'w') as resultsfile:
+    json.dump(results_dict, resultsfile)
+
+
+
