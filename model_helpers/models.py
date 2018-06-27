@@ -110,10 +110,11 @@ def compute_indeterminate_confusion(y_prob, y_test):
     return (true_negatives, false_positives, false_negatives, true_positives, fc_indeterminate, kd_indeterminate)
 
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
-def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, random_state=90007):
+def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, return_val='roc_auc', random_state=90007):
     stats_arr = []
     best_scores = []
-    roc_curves = []
+    oos_roc_curves = [] # out-of-sample ROC curves
+    oos_roc_scores = [] # out-of-sample ROC scores
     kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
     for train_idx, test_idx in kf.split(x, y):
         # Unpack CV split
@@ -125,7 +126,8 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, random_st
         y_pred = model.predict(x_test, threshold=threshold)
         # Get ROC curve
         roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
-        roc_curves.append(roc)
+        oos_roc_curves.append(roc)
+        oos_roc_scores.append(auc(roc[0], roc[1]))
         # Confusion info
         if allow_indeterminates == False:
             stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix
@@ -134,9 +136,14 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, random_st
 
     print('CV Confusion: ', stats_arr)
     print('Best CV scores: ', np.around(best_scores, decimals=4))
-    print('Avg best scores: ', np.mean(best_scores))
+    print('Avg best CV scores: ', np.mean(best_scores))
+    print('Avg out-of-sample ROCAUC: ', np.mean(oos_roc_scores))
     explain_confusion(np.sum(stats_arr, axis=0), indeterminates=allow_indeterminates)
-    return np.mean(best_scores) # mean ROCAUC
+
+    if return_val == 'roc_auc': 
+        return np.mean(oos_roc_scores) # mean ROCAUC
+    elif return_val == 'roc_curves':
+        return oos_roc_curves
 
 # Plot ROC Curves from K-Fold CV, show mean, variance across K-folds
     # Takes in a list of (fpr-array, tpr-array, threshold-array) tuples
