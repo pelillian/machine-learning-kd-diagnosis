@@ -58,7 +58,7 @@ for random_state in RANDOM_STATES:
 	}
 	if (CLASS_WEIGHT != "none"):
 		lr_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
-	print("Logistic Regression")
+	print("LOGISTIC REGRESSION")
 	avg_rocauc = test_model(ScikitModel(LogisticRegression(), 
 					params=lr_params,
 					random_search=False,
@@ -81,7 +81,7 @@ for random_state in RANDOM_STATES:
 	}
 	if (CLASS_WEIGHT != "none"):
 		svc_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
-	print("Support Vector Classification")
+	print("SUPPORT VECTOR CLASSIFIER")
 	avg_rocauc = test_model(ScikitModel(SVC(probability=True),
 					params=svc_params,
 					random_search=True,
@@ -128,7 +128,7 @@ for random_state in RANDOM_STATES:
 		'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
-	print('XGBoost')
+	print('XGBOOST')
 	avg_rocauc = test_model(ScikitModel(
 					xgb.XGBClassifier(
 						n_jobs=N_JOBS
@@ -175,7 +175,7 @@ for random_state in RANDOM_STATES:
 		bootstrap_features=False,
 		n_jobs=N_JOBS
 	)
-	print("Logistic Regression Bagging")
+	print("LOGISTIC REGRESSION BAGGING")
 	avg_rocauc = test_model(ScikitModel(
 					bagging_lr,
 					params=bag_lr_params,
@@ -207,7 +207,7 @@ for random_state in RANDOM_STATES:
 		bootstrap_features=False,
 		n_jobs=N_JOBS
 	)
-	print("SVC Bagging")
+	print("SVC BAGGING")
 	avg_rocauc = test_model(ScikitModel(
 					bagging_svc,
 					params=bag_svm_params,
@@ -249,7 +249,7 @@ for random_state in RANDOM_STATES:
 		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
-	print("Voting Ensemble")
+	print("LR-SVC-XGB VOTING ENSEMBLE")
 	avg_rocauc = test_model(ScikitModel(
 					eclf,
 					eclf_params,
@@ -271,7 +271,7 @@ for random_state in RANDOM_STATES:
 ### SUMMARIZE RESULTS ###
 print('\n---------- SUMMARY OF RESULTS ----------\n')
 print('Num. random seeds tested: {}'.format(len(RANDOM_STATES)))
-print('Average of average best scores:')
+print('Average of average out-of-sample ROCAUCs:')
 print()
 
 for model, results_list in results_dict.items():
