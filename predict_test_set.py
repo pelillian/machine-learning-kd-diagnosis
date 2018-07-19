@@ -51,6 +51,7 @@ N_JOBS = 1
 with open('./data/test_predictions/test_preds.csv', 'w') as f:
 
 	writer = csv.DictWriter(f, fieldnames=['model', 'patient_id', 'kd_probability'])
+	writer.writeheader()
 
 	### LOGISTIC REGRESSION ###
 	print('LOGISTIC REGRESSION')
