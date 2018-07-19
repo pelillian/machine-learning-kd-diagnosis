@@ -150,3 +150,29 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
 	ids_array = ids_all.values
 
 	return (x_filled, y_array, ids_array)
+
+# Load test dataset from pickle dump (18 features)
+# Returns: x_all, ids_all (numpy arrays)
+def load_test(fill_mode='mean', standardize=True, k=5, \
+	return_ids=True):
+	# Load pickle dump
+	try:
+		f = open('../data/kd_dataset_test.pkl','rb')
+	except:
+		f = open('./data/kd_dataset_test.pkl','rb')
+	x_all, ids_all = pkl.load(f)
+	f.close()
+
+	# Standardize
+	if fill_mode == 'knn':
+		standardize = True
+	if standardize:
+		standardize_df(x_all)
+
+	# Fill NaNs
+	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
+
+	# Convert to numpy.ndarray
+	ids_array = ids_all.values
+
+	return (x_filled, ids_array)
