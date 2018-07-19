@@ -48,6 +48,8 @@ RANDOM_STATE = 0
 ALLOW_INDETERMINATES = True
 N_JOBS = 1
 
+np.random.seed(RANDOM_STATE)
+
 with open('./data/test_predictions/test_preds.csv', 'w') as f:
 
 	writer = csv.DictWriter(f, fieldnames=['model', 'patient_id', 'kd_probability'])
@@ -175,7 +177,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 	bagging_svc.train(x_train, y_train)
 	bagging_svc_preds = bagging_svc.predict_proba(x_test)
 
-	for i, probability in enumerate(baggin_svc_preds):
+	for i, probability in enumerate(bagging_svc_preds):
 		writer.writerow({'model':'support_vector_classifier_ensemble', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
