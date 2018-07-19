@@ -154,6 +154,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 
 
 	### BAGGING SVC ###
+	print('SVG BAGGING')
 	bag_svm_params = {
 		'base_estimator__C': np.logspace(-3, 2, 100),
 		'base_estimator__gamma': np.logspace(-3, 2, 100),
