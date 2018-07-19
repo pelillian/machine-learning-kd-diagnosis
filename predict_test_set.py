@@ -129,7 +129,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 		'base_estimator__C':np.logspace(-2, 2, 5),
 		'n_estimators':randint(5, 50),
 		'max_samples':np.logspace(-0.9, 0, 100),
-		'max_features':randint(10, x.shape[1])
+		'max_features':randint(10, x_train.shape[1])
 	}
 
 	bagging_lr = ScikitModel(BaggingClassifier(
@@ -159,7 +159,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 		'base_estimator__probability': [True, False],
 		'n_estimators': randint(5, 50),
 		"max_samples": np.logspace(-0.9, 0, 100),
-		"max_features": randint(10, x.shape[1])
+		"max_features": randint(10, x_train.shape[1])
 	}
 
 	bagging_svc = ScikitModel(BaggingClassifier(
