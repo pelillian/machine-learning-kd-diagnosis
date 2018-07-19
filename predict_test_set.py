@@ -52,7 +52,9 @@ np.random.seed(RANDOM_STATE)
 
 with open('./data/test_predictions/test_preds.csv', 'w') as f:
 
-	writer = csv.DictWriter(f, fieldnames=['model', 'patient_id', 'kd_probability'])
+	writer = csv.DictWriter(f, fieldnames=['patient_id', 
+		'logistic_regression_kd_probability', 'support_vector_classifier_kd_probability', 'xgboost_kd_probability', 
+		'lr_bagging_kd_probability', 'svc_bagging_kd_probability', 'voting_ensemble_kd_probability'])
 	writer.writeheader()
 
 	### LOGISTIC REGRESSION ###
@@ -68,9 +70,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 					verbose=True)
 	lr.train(x_train, y_train)
 	lr_preds = lr.predict_proba(x_test)
-
-	for i, probability in enumerate(lr_preds):
-		writer.writerow({'model':'logistic_regression', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
 
@@ -91,9 +90,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 					verbose=True)
 	svc.train(x_train, y_train)
 	svc_preds = svc.predict_proba(x_test)
-
-	for i, probability in enumerate(svc_preds):
-		writer.writerow({'model':'support_vector_classifier', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
 
@@ -119,9 +115,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 	xgboost.train(x_train, y_train)
 	xgboost_preds = xgboost.predict_proba(x_test)
 
-	for i, probability in enumerate(xgboost_preds):
-		writer.writerow({'model':'xgboost', 'patient_id': ids_test[i], 'kd_probability': probability})
-
 	print()
 
 
@@ -146,9 +139,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 					verbose=1)
 	bagging_lr.train(x_train, y_train)
 	bagging_lr_preds = bagging_lr.predict_proba(x_test)
-
-	for i, probability in enumerate(bagging_lr_preds):
-		writer.writerow({'model':'logistic_regression_ensemble', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
 
@@ -177,9 +167,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 					verbose=1)
 	bagging_svc.train(x_train, y_train)
 	bagging_svc_preds = bagging_svc.predict_proba(x_test)
-
-	for i, probability in enumerate(bagging_svc_preds):
-		writer.writerow({'model':'support_vector_classifier_ensemble', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
 
@@ -222,8 +209,6 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 	eclf.train(x_train, y_train)
 	eclf_preds = eclf.predict_proba(x_test)
 
-	for i, probability in enumerate(eclf_preds):
-		writer.writerow({'model':'voting_ensemble', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
 
@@ -234,3 +219,19 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 
 
 
+
+	print('Writing final predictions...')
+
+	### WRITE PREDICTIONS ###
+	for i, patient_id in enumerate(ids_test):
+		writer.writerow({
+			'patient_id': patient_id, 
+			'logistic_regression_kd_probability': lr_preds[i],
+			'support_vector_classifier_kd_probability': svc_preds[i],
+			'xgboost_kd_probability': xgboost_preds[i], 
+			'lr_bagging_kd_probability': bagging_lr_preds[i],
+			'svc_bagging_kd_probability': bagging_svc_preds[i], 
+			'voting_ensemble_kd_probability': eclf_preds[i]
+			})
+
+	print('Done!')
