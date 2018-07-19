@@ -108,7 +108,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 
-	xgb = ScikitModel(xgb.XGBClassifier(
+	xgboost = ScikitModel(xgb.XGBClassifier(
 						n_jobs=N_JOBS
 					),
 					params=xgb_params,
@@ -116,10 +116,10 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 					n_iter=25,
 					scoring='roc_auc',
 					verbose=True)
-	xgb.train(x_train, y_train)
-	xgb_preds = xgb.predict_proba(x_test)
+	xgboost.train(x_train, y_train)
+	xgboost_preds = xgboost.predict_proba(x_test)
 
-	for i, probability in enumerate(xgb_preds):
+	for i, probability in enumerate(xgboost_preds):
 		writer.writerow({'model':'xgboost', 'patient_id': ids_test[i], 'kd_probability': probability})
 
 	print()
