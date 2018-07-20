@@ -37,14 +37,12 @@ lda = ScikitModel(LinearDiscriminantAnalysis(),
 	verbose=True)
 lda.train(x_train, y_train)
 lda_train_prob = lda.predict_proba(x_train)
-lda_train_pred = lda.predict(x_train, threshold=0.5)
 lda_test_prob = lda.predict_proba(x_test)
-lda_test_pred = lda.predict(x_test, threshold=0.5)
 
-fc_threshold, kd_threshold = get_fc_kd_thresholds(lda_test_prob, y_test)
+lda_fc_threshold, lda_kd_threshold = get_fc_kd_thresholds(lda_test_prob, y_test)
 
-indeterminate_train = np.array(np.logical_and(lda_train_prob > fc_threshold, lda_train_prob < kd_threshold))
-indeterminate_test = np.array(np.logical_and(lda_test_prob > fc_threshold, lda_test_prob < kd_threshold))
+indeterminate_train = np.array(np.logical_and(lda_train_prob > lda_fc_threshold, lda_train_prob < lda_kd_threshold))
+indeterminate_test = np.array(np.logical_and(lda_test_prob > lda_fc_threshold, lda_test_prob < lda_kd_threshold))
 
 x_indeterminate_train = x_train[indeterminate_train]
 x_indeterminate_test = x_test[indeterminate_test]
@@ -66,6 +64,6 @@ rf = ScikitModel(RandomForestClassifier(),
 	verbose=True)
 rf.train(x_indeterminate_train, y_indeterminate_train)
 rf_train_prob = rf.predict_proba(x_indeterminate_train)
-rf_train_pred = rf.predict(x_indeterminate_train, threshold=0.5)
 rf_test_prob = rf.predict_proba(x_indeterminate_test)
-rf_test_pred = rf.predict(x_indeterminate_test, threshold=0.5)
+
+rf_fc_threshold, rf_kd_threshold = get_fc_kd_thresholds(rf_test_prob, y_indeterminate_test)
