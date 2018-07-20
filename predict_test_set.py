@@ -156,7 +156,7 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 	}
 
 	bagging_svc = ScikitModel(BaggingClassifier(
-						base_estimator=SVC(),
+						base_estimator=SVC(probability=True),
 						bootstrap=True,
 						bootstrap_features=False,
 						n_jobs=N_JOBS
