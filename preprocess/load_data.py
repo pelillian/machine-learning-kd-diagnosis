@@ -86,6 +86,12 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True
 	x_train, x_test, y_train, y_test = pkl.load(f)
 	f.close()
 
+	y_train = y_train[x_train['illday'] <= 10]
+	y_test = y_test[x_test['illday'] <= 10]
+
+	x_train = x_train[x_train['illday'] <= 10]
+	x_test = x_test[x_test['illday'] <= 10]
+
 	test_peternum = x_test['peternum']
 	train_peternum = x_train['peternum']
 	if not return_ids:
@@ -132,6 +138,11 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
 		'peos', 'pesr', 'pcrp', 'pplts', 'palt', 'pggt', 'zhemo']
 		x_all = x_all[reduced_features] # update dataframe
 
+	y_all = y_all[x_all['illday'] <= 10]
+	ids_all = ids_all[x_all['illday'] <= 10]
+
+	x_all = x_all[x_all['illday'] <= 10]
+
 	# Standardize
 	if fill_mode == 'knn':
 		standardize = True
@@ -162,6 +173,10 @@ def load_test(fill_mode='mean', standardize=True, k=5, \
 		f = open('./data/kd_dataset_test.pkl','rb')
 	x_all, ids_all = pkl.load(f)
 	f.close()
+	
+	ids_all = ids_all[x_all['illday'] <= 10]
+
+	x_all = x_all[x_all['illday'] <= 10]
 
 	# Standardize
 	if fill_mode == 'knn':
