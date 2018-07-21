@@ -79,6 +79,7 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
 			valid_thresholds_ppv.append(threshold)
 		if npv >= 0.95:
 			valid_thresholds_npv.append(threshold)
+	# print(np.column_stack((y_prob, y_test)))
 	try: 
 		kd_threshold = min(valid_thresholds_ppv) # lowest threshold past which PPV >= 0.95 (predict KD)
 	except: 
