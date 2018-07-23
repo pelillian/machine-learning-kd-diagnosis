@@ -64,7 +64,6 @@ class StanfordModel:
 		indeterminate_test = np.array(np.logical_and(lda_test_proba > self.lda_fc_threshold, lda_test_proba < self.lda_kd_threshold))
 
 		x_indeterminate_test = x_test[indeterminate_test]
-		y_indeterminate_test = y_test[indeterminate_test]
 
 		rf_test_proba = self.rf.predict_proba(x_indeterminate_test)[:, 1]
 
