@@ -14,6 +14,8 @@ from scipy.stats import randint
 from collections import Counter
 import json
 
+from stanford_kd_algorithm import StanfordModel
+
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, fbeta_score
@@ -51,6 +53,16 @@ for random_state in RANDOM_STATES:
 	print("------- RANDOM STATE: {} -------".format(random_state))
 	print("")
 
+	#### Stanford Algorithm ####
+	avg_rocauc = test_model(StanfordModel(
+					verbose=True),
+				x, y,
+				allow_indeterminates=True,
+				random_state=random_state)
+	if 'stanford' not in results_dict:
+		results_dict['stanford'] = []
+	results_dict['stanford'].append(avg_rocauc)
+	print()
 
 	#### Logistic Regression ###
 	lr_params = {
