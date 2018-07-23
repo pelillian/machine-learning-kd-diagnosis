@@ -225,7 +225,7 @@ class ScikitModel:
 	
 	# Predict on x_test, return binary y_pred
 	def predict(self, x_test, threshold=0.5):
-		y_prob = self.paramsearch.predict_proba(x_test)[:, 1] # probability of KD
+		y_prob = self.predict_proba(x_test) # probability of KD
 		y_pred = apply_threshold(y_prob, threshold)
 		return y_pred
 
