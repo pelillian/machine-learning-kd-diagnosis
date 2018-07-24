@@ -345,12 +345,12 @@ print('--- Average confusion info: ---')
 for model, results_list in confusions_dict.items():
 	print('{} results:'.format(model))
 	avg_confusion = np.mean(results_list, axis=0)
-	explain_confusion(avg_confusion)
+	explain_confusion(avg_confusion, indeterminates=True)
 	print()
 
 with open('results_json.txt', 'w') as resultsfile:
 	all_results = {
-		'roc_results': rocsaucs_dict,
+		'roc_results': rocaucs_dict,
 		'confusion_results': confusions_dict
 	}
 	json.dump(all_results, resultsfile)
