@@ -59,7 +59,8 @@ for random_state in RANDOM_STATES:
 					verbose=True),
 				x, y,
 				allow_indeterminates=True,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'stanford' not in rocaucs_dict:
 		rocaucs_dict['stanford'] = []
@@ -85,7 +86,8 @@ for random_state in RANDOM_STATES:
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'lr' not in rocaucs_dict:
 		rocaucs_dict['lr'] = []
@@ -115,7 +117,8 @@ for random_state in RANDOM_STATES:
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'svc' not in rocaucs_dict:
 		rocaucs_dict['svc'] = []
@@ -171,7 +174,8 @@ for random_state in RANDOM_STATES:
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'xgb' not in rocaucs_dict:
 		rocaucs_dict['xgb'] = []
@@ -221,7 +225,8 @@ for random_state in RANDOM_STATES:
 					verbose=1),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'lr_bag' not in rocaucs_dict:
 		rocaucs_dict['lr_bag'] = []
@@ -259,7 +264,8 @@ for random_state in RANDOM_STATES:
 					verbose=1),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'svc_bag' not in rocaucs_dict:
 		rocaucs_dict['svc_bag'] = []
@@ -307,7 +313,8 @@ for random_state in RANDOM_STATES:
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state)
+				random_state=random_state,
+				return_val='roc_confusion')
 
 	if 'voting_clf' not in rocaucs_dict:
 		rocaucs_dict['voting_clf'] = []
