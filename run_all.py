@@ -45,7 +45,8 @@ ALLOW_INDETERMINATES = True
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
 
-results_dict = {}
+rocaucs_dict = {}
+confusions_dict = {}
 
 ### RUN EXPERIMENTS ###
 for random_state in RANDOM_STATES:
@@ -54,14 +55,20 @@ for random_state in RANDOM_STATES:
 	print("")
 
 	#### Stanford Algorithm ####
-	avg_rocauc = test_model(StanfordModel(
+	avg_rocauc, confusions = test_model(StanfordModel(
 					verbose=True),
 				x, y,
 				allow_indeterminates=True,
 				random_state=random_state)
-	if 'stanford' not in results_dict:
-		results_dict['stanford'] = []
-	results_dict['stanford'].append(avg_rocauc)
+
+	if 'stanford' not in rocaucs_dict:
+		rocaucs_dict['stanford'] = []
+	rocaucs_dict['stanford'].append(avg_rocauc)
+
+	if 'stanford' not in confusions_dict:
+		confusions_dict['stanford'] = []
+	confusions_dict['stanford'].append(confusions)
+
 	print()
 
 	#### Logistic Regression ###
@@ -71,7 +78,7 @@ for random_state in RANDOM_STATES:
 	if (CLASS_WEIGHT != "none"):
 		lr_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 	print("LOGISTIC REGRESSION")
-	avg_rocauc = test_model(ScikitModel(LogisticRegression(), 
+	avg_rocauc, confusions = test_model(ScikitModel(LogisticRegression(), 
 					params=lr_params,
 					random_search=False,
 					scoring='roc_auc',
@@ -79,9 +86,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'lr' not in results_dict:
-		results_dict['lr'] = []
-	results_dict['lr'].append(avg_rocauc)
+
+	if 'lr' not in rocaucs_dict:
+		rocaucs_dict['lr'] = []
+	rocaucs_dict['lr'].append(avg_rocauc)
+
+	if 'lr' not in confusions_dict:
+		confusions_dict['lr'] = []
+	confusions_dict['lr'].append(confusions)
+
 	print()
 
 
@@ -94,7 +107,7 @@ for random_state in RANDOM_STATES:
 	if (CLASS_WEIGHT != "none"):
 		svc_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 	print("SUPPORT VECTOR CLASSIFIER")
-	avg_rocauc = test_model(ScikitModel(SVC(probability=True),
+	avg_rocauc, confusions = test_model(ScikitModel(SVC(probability=True),
 					params=svc_params,
 					random_search=True,
 					n_iter=25,
@@ -103,9 +116,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'svc' not in results_dict:
-		results_dict['svc'] = []
-	results_dict['svc'].append(avg_rocauc)
+
+	if 'svc' not in rocaucs_dict:
+		rocaucs_dict['svc'] = []
+	rocaucs_dict['svc'].append(avg_rocauc)
+
+	if 'svc' not in confusions_dict:
+		confusions_dict['svc'] = []
+	confusions_dict['svc'].append(confusions)
+
 	print()
 
 
@@ -141,7 +160,7 @@ for random_state in RANDOM_STATES:
 		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 	print('XGBOOST')
-	avg_rocauc = test_model(ScikitModel(
+	avg_rocauc, confusions = test_model(ScikitModel(
 					xgb.XGBClassifier(
 						n_jobs=N_JOBS
 					),
@@ -153,9 +172,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'xgb' not in results_dict:
-		results_dict['xgb'] = []
-	results_dict['xgb'].append(avg_rocauc)
+
+	if 'xgb' not in rocaucs_dict:
+		rocaucs_dict['xgb'] = []
+	rocaucs_dict['xgb'].append(avg_rocauc)
+
+	if 'xgb' not in confusions_dict:
+		confusions_dict['xgb'] = []
+	confusions_dict['xgb'].append(confusions)
+
 	print()
 
 
@@ -188,7 +213,7 @@ for random_state in RANDOM_STATES:
 		n_jobs=N_JOBS
 	)
 	print("LOGISTIC REGRESSION BAGGING")
-	avg_rocauc = test_model(ScikitModel(
+	avg_rocauc, confusions = test_model(ScikitModel(
 					bagging_lr,
 					params=bag_lr_params,
 					random_search=True,
@@ -197,9 +222,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'lr_bag' not in results_dict:
-		results_dict['lr_bag'] = []
-	results_dict['lr_bag'].append(avg_rocauc)
+
+	if 'lr_bag' not in rocaucs_dict:
+		rocaucs_dict['lr_bag'] = []
+	rocaucs_dict['lr_bag'].append(avg_rocauc)
+
+	if 'lr_bag' not in confusions_dict:
+		confusions_dict['lr_bag'] = []
+	confusions_dict['lr_bag'].append(confusions)
+
 	print()
 
 
@@ -220,7 +251,7 @@ for random_state in RANDOM_STATES:
 		n_jobs=N_JOBS
 	)
 	print("SVC BAGGING")
-	avg_rocauc = test_model(ScikitModel(
+	avg_rocauc, confusions = test_model(ScikitModel(
 					bagging_svc,
 					params=bag_svm_params,
 					random_search=True,
@@ -229,9 +260,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'svc_bag' not in results_dict:
-		results_dict['svc_bag'] = []
-	results_dict['svc_bag'].append(avg_rocauc)
+
+	if 'svc_bag' not in rocaucs_dict:
+		rocaucs_dict['svc_bag'] = []
+	rocaucs_dict['svc_bag'].append(avg_rocauc)
+
+	if 'svc_bag' not in confusions_dict:
+		confusions_dict['svc_bag'] = []
+	confusions_dict['svc_bag'].append(confusions)
+
 	print()
 
 
@@ -262,7 +299,7 @@ for random_state in RANDOM_STATES:
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 	print("LR-SVC-XGB VOTING ENSEMBLE")
-	avg_rocauc = test_model(ScikitModel(
+	avg_rocauc, confusions = test_model(ScikitModel(
 					eclf,
 					eclf_params,
 					random_search=True, 
@@ -271,9 +308,15 @@ for random_state in RANDOM_STATES:
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state)
-	if 'voting_clf' not in results_dict:
-		results_dict['voting_clf'] = []
-	results_dict['voting_clf'].append(avg_rocauc)
+
+	if 'voting_clf' not in rocaucs_dict:
+		rocaucs_dict['voting_clf'] = []
+	rocaucs_dict['voting_clf'].append(avg_rocauc)
+
+	if 'voting_clf' not in confusions_dict:
+		confusions_dict['voting_clf'] = []
+	confusions_dict['voting_clf'].append(confusions)
+
 	print()
 
 	print()
@@ -283,15 +326,27 @@ for random_state in RANDOM_STATES:
 ### SUMMARIZE RESULTS ###
 print('\n---------- SUMMARY OF RESULTS ----------\n')
 print('Num. random seeds tested: {}'.format(len(RANDOM_STATES)))
-print('Average of average out-of-sample ROCAUCs:')
 print()
 
-for model, results_list in results_dict.items():
+print('--- Average of average out-of-sample ROCAUCs: ---')
+for model, results_list in rocaucs_dict.items():
 	avg_rocauc = np.mean(results_list)
 	print('{}: {}'.format(model, avg_rocauc))
+print()
+
+print('--- Average confusion info: ---')
+for model, results_list in confusions_dict.items():
+	print('{} results:'.format(model))
+	avg_confusion = np.mean(results_list, axis=0)
+	explain_confusion(avg_confusion)
+	print()
 
 with open('results_json.txt', 'w') as resultsfile:
-    json.dump(results_dict, resultsfile)
+	all_results = {
+		'roc_results': rocsaucs_dict,
+		'confusion_results': confusions_dict
+	}
+    json.dump(all_results, resultsfile)
 
 
 
