@@ -141,7 +141,7 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, return_va
 	print('Avg best CV scores: ', np.mean(best_scores))
 	print('Avg out-of-sample ROCAUC: ', np.mean(oos_roc_scores))
 
-	total_confusion = list(np.sum(stats_arr, axis=0))
+	total_confusion = np.sum(stats_arr, axis=0).tolist()
 	explain_confusion(total_confusion, indeterminates=allow_indeterminates)
 
 	if return_val == 'roc_auc': 
