@@ -48,7 +48,7 @@ class StanfordModel:
 
 		### Random Forest ###
 		self.rf = RandomForestClassifier(n_estimators=self.rf_n_estimators, max_features=self.rf_max_features)
-		self.rf.fit(x_indeterminate_train, y_indeterminate_train)
+		self.rf.fit(x_train, y_train)
 		rf_train_proba = self.rf.predict_proba(x_indeterminate_train)[:, 1]
 
 		final_proba = np.copy(lda_train_proba)

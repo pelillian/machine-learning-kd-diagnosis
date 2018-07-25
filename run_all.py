@@ -55,10 +55,9 @@ for random_state in RANDOM_STATES:
 	print("")
 
 	#### Stanford Algorithm ####
-	avg_rocauc, confusions = test_model(StanfordModel(
+	avg_rocauc, confusions = test_stanford_model(StanfordModel(
 					verbose=True),
 				x, y,
-				allow_indeterminates=True,
 				random_state=random_state,
 				return_val='roc_confusion')
 

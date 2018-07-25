@@ -112,7 +112,7 @@ def compute_indeterminate_confusion(y_prob, y_test):
 
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
-def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, return_val='roc_auc', random_state=90007):
+def test_model(model, x, y, threshold=0.5, allow_indeterminates=True, return_val='roc_auc', random_state=90007):
 	stats_arr = []
 	best_scores = []
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -143,6 +143,84 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=False, return_va
 
 	total_confusion = np.sum(stats_arr, axis=0).tolist()
 	explain_confusion(total_confusion, indeterminates=allow_indeterminates)
+
+	if return_val == 'roc_auc': 
+		return np.mean(oos_roc_scores) # mean ROCAUC
+	elif return_val == 'roc_curves':
+		return oos_roc_curves
+	elif return_val == 'roc_confusion':
+		return (np.mean(oos_roc_scores), total_confusion)
+
+
+# Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
+	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
+def test_stanford_model(model, x, y, return_val='roc_auc', random_state=90007):
+	stats_arr = []
+	best_scores = []
+	oos_roc_curves = [] # out-of-sample ROC curves
+	oos_roc_scores = [] # out-of-sample ROC scores
+
+	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+	for train_idx, test_idx in kf.split(x, y):
+		# Unpack CV split
+		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		
+		# Fit LDA and RF, get 2-stage ROCAUC
+		best_score = model.train(x_train, y_train)
+		best_scores.append(best_score)
+
+		# 2-stage predict_proba
+		lda_y_prob = model.lda.predict_proba(x_test)[:, 1]
+		rf_y_prob = model.lda.predict_proba(x_test)[:, 1]
+		y_prob = model.predict_proba(x_test)
+
+		# Get ROC curve
+		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
+		oos_roc_curves.append(roc)
+		oos_roc_scores.append(auc(roc[0], roc[1]))
+
+		# Perform prediction thresholding
+		lda_fc_threshold, lda_kd_threshold = get_fc_kd_thresholds(model.lda.predict_proba(x_test)[:, 1], y_test)
+		rf_fc_threshold, rf_kd_threshold = get_fc_kd_thresholds(model.rf.predict_proba(x_test)[:, 1], y_test)
+
+		# Stage 1: LDA
+		lda_fc_binary = np.array(lda_y_prob <= lda_fc_threshold).astype(np.int32) # where lda_y_prob <= lda_fc_threshold
+		lda_kd_binary = np.array(lda_y_prob >= lda_kd_threshold).astype(np.int32) # where lda_y_prob >= lda_kd_threshold
+		lda_indeterminate_binary = np.array(np.logical_and(lda_y_prob > lda_fc_threshold, lda_y_prob < lda_kd_threshold)).astype(np.int32)
+		lda_indeterminate_inds = np.argwhere(lda_indeterminate_binary == 1)
+
+		# Stage 2: RF
+		final_fc_binary = np.copy(lda_fc_binary)
+		final_kd_binary = np.copy(lda_kd_binary)
+		final_indeterminate_binary = np.copy(lda_indeterminate_binary)
+
+		# Get RF predictions
+		rf_fc_binary = np.array(rf_y_prob <= rf_fc_threshold).astype(np.int32) # where rf_y_prob <= rf_fc_threshold
+		rf_kd_binary = np.array(rf_y_prob >= rf_kd_threshold).astype(np.int32) # where rf_y_prob <= rf_fc_threshold
+		rf_non_indeterminate = np.array(np.logical_or(rf_fc_binary, rf_kd_binary)) # where a prediction was made by RF (non-indeterminate)
+
+		# Apply RF predictions
+		final_fc_binary[lda_indeterminate_inds] = rf_fc_binary[lda_indeterminate_inds] # apply RF FC predictions to indeterminates
+		final_kd_binary[lda_indeterminate_inds] = rf_kd_binary[lda_indeterminate_inds] # apply RF KD predictions to indeterminates
+		final_indeterminate_binary[lda_indeterminate_inds] = rf_non_indeterminate[lda_indeterminate_inds] # update indeterminate entries
+
+		# Get TP, TN, FP, FN, Indeterminates
+		true_negatives = np.sum(final_fc_binary * (1 - y_test)) # fc_binary = 1 and y_test = 0
+		false_positives = np.sum(final_kd_binary * (1 - y_test)) # kd_binary = 1 and y_test = 0
+		false_negatives = np.sum(final_fc_binary * y_test) # fc_binary = 1 and y_test = 1
+		true_positives = np.sum(final_kd_binary * y_test) # kd_binary = 1 and y_test = 1
+		fc_indeterminate = np.sum(final_indeterminate_binary * (1 - y_test)) # indeterminate_binary = 1 and y_test = 0
+		kd_indeterminate = np.sum(final_indeterminate_binary * y_test) # indeterminate_binary = 1 and y_test = 1
+
+		stats_arr.append((true_negatives, false_positives, false_negatives, true_positives, fc_indeterminate, kd_indeterminate))
+
+	print('CV Confusion: ', stats_arr)
+	print('Best CV scores: ', np.around(best_scores, decimals=4))
+	print('Avg best CV scores: ', np.mean(best_scores))
+	print('Avg out-of-sample ROCAUC: ', np.mean(oos_roc_scores))
+
+	total_confusion = np.sum(stats_arr, axis=0).tolist()
+	explain_confusion(total_confusion, indeterminates=True)
 
 	if return_val == 'roc_auc': 
 		return np.mean(oos_roc_scores) # mean ROCAUC
