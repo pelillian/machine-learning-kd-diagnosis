@@ -4,7 +4,7 @@
 # Imports
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
 from sklearn.metrics import make_scorer, fbeta_score, confusion_matrix, roc_curve, auc
 from scipy import interp
 import matplotlib.pyplot as plt
@@ -93,9 +93,12 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
 	return (fc_threshold, kd_threshold)
 
 # Get TN, FP, FN, TP, fc_indeterminate, kd_indeterminate for given y_prob and y_test
-def compute_indeterminate_confusion(y_prob, y_test):
+def compute_indeterminate_confusion(y_prob, y_test, fc_kd_thresholds=None):
 	# Threshold y_prob, get predictions
-	fc_threshold, kd_threshold = get_fc_kd_thresholds(y_prob, y_test)
+	if fc_kd_thresholds == None:
+		fc_threshold, kd_threshold = get_fc_kd_thresholds(y_prob, y_test)
+	else:
+		fc_threshold, kd_threshold = fc_kd_thresholds
 	fc_binary = np.array(y_prob <= fc_threshold).astype(np.int32) # where y_prob <= fc_threshold
 	kd_binary = np.array(y_prob >= kd_threshold).astype(np.int32) # where y_prob >= kd_threshold
 	indeterminate_binary = np.array(np.logical_and(y_prob > fc_threshold, y_prob < kd_threshold)).astype(np.int32)
@@ -112,7 +115,10 @@ def compute_indeterminate_confusion(y_prob, y_test):
 
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
-def test_model(model, x, y, threshold=0.5, allow_indeterminates=True, return_val='roc_auc', random_state=90007):
+def test_model(model, x, y, 
+		threshold=0.5, allow_indeterminates=True, 
+		calibration_set_size=0.2,
+		return_val='roc_auc', random_state=90007):
 	stats_arr = []
 	best_scores = []
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -121,20 +127,27 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=True, return_val
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
 		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		# Separate risk-calibration set
+		x_train, x_calibrate, y_train, y_calibrate = train_test_split(x_train, y_train, 
+			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
+
 		# Train and predict
 		best_score = model.train(x_train, y_train)
 		best_scores.append(best_score)
 		y_prob = model.predict_proba(x_test)
 		y_pred = model.predict(x_test, threshold=threshold)
+
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
 		oos_roc_curves.append(roc)
 		oos_roc_scores.append(auc(roc[0], roc[1]))
+
 		# Confusion info
 		if allow_indeterminates == False:
-			stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix
+			stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix with 1 set threshold
 		else:
-			stats_arr.append(compute_indeterminate_confusion(y_prob, y_test)) # confusion matrix with indeterminates
+			fc_kd_thresholds = get_fc_kd_thresholds(model.predict_proba(x_calibrate), y_calibrate) # risk calibration
+			stats_arr.append(compute_indeterminate_confusion(y_prob, y_test, fc_kd_thresholds)) # confusion matrix with indeterminates
 
 	print('CV Confusion: ', stats_arr)
 	print('Best CV scores: ', np.around(best_scores, decimals=4))
@@ -154,7 +167,7 @@ def test_model(model, x, y, threshold=0.5, allow_indeterminates=True, return_val
 
 # Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
-def test_stanford_model(model, x, y, return_val='roc_auc', random_state=90007):
+def test_stanford_model(model, x, y, calibration_set_size=0.2, return_val='roc_auc', random_state=90007):
 	stats_arr = []
 	best_scores = []
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -164,10 +177,17 @@ def test_stanford_model(model, x, y, return_val='roc_auc', random_state=90007):
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
 		x_train, x_test, y_train, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		# Separate risk-calibration set
+		x_train, x_calibrate, y_train, y_calibrate = train_test_split(x_train, y_train,
+			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
 		
 		# Fit LDA and RF, get 2-stage ROCAUC
 		best_score = model.train(x_train, y_train)
 		best_scores.append(best_score)
+
+		# Perform prediction thresholding
+		lda_fc_threshold, lda_kd_threshold = get_fc_kd_thresholds(model.lda.predict_proba(x_calibrate)[:, 1], y_calibrate)
+		rf_fc_threshold, rf_kd_threshold = get_fc_kd_thresholds(model.rf.predict_proba(x_calibrate)[:, 1], y_calibrate)
 
 		# 2-stage predict_proba
 		lda_y_prob = model.lda.predict_proba(x_test)[:, 1]
@@ -178,10 +198,6 @@ def test_stanford_model(model, x, y, return_val='roc_auc', random_state=90007):
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
 		oos_roc_curves.append(roc)
 		oos_roc_scores.append(auc(roc[0], roc[1]))
-
-		# Perform prediction thresholding
-		lda_fc_threshold, lda_kd_threshold = get_fc_kd_thresholds(model.lda.predict_proba(x_test)[:, 1], y_test)
-		rf_fc_threshold, rf_kd_threshold = get_fc_kd_thresholds(model.rf.predict_proba(x_test)[:, 1], y_test)
 
 		# Stage 1: LDA
 		lda_fc_binary = np.array(lda_y_prob <= lda_fc_threshold).astype(np.int32) # where lda_y_prob <= lda_fc_threshold
