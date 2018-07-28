@@ -383,7 +383,7 @@ for random_state in RANDOM_STATES:
 		'gamma': np.logspace(-3, 2, 100),
 		'kernel': ['linear', 'rbf', 'poly']
 	}
-	stage1 = RandomizedSearchCV(SVC(), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	stage1 = RandomizedSearchCV(SVC(probability=True), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
 
 	xgb_params = {
 		'n_estimators': randint(50, 500),
