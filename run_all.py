@@ -17,7 +17,7 @@ import json
 # from stanford_kd_algorithm import TwoStageModel
 
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.metrics import make_scorer, fbeta_score
 from imblearn.over_sampling import SMOTE
 
@@ -339,6 +339,81 @@ for random_state in RANDOM_STATES:
 	confusions_dict['voting_clf'].append(confusions)
 
 	print()
+
+
+	### LR --> XGB 2-STAGE MODEL ###
+	lr_params = {
+		'C': np.logspace(-2, 2, 5)
+	}
+	stage1 = GridSearchCV(LogisticRegression(), lr_params, cv=5, scoring='roc_auc', verbose=1)
+
+	xgb_params = {
+		'n_estimators': randint(50, 500),
+		'max_depth': randint(3, 10),
+		'learning_rate': np.logspace(-2, 0, 100),
+		'min_child_weight': randint(1, 5),
+		'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	}
+	stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	print('LR + XGB 2-STAGE ENSEMBLE')
+
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, stage2,
+					verbose=True),
+				x, y,
+				random_state=random_state,
+				calibration_set_size=CALIBRATION_SET_SIZE,
+				return_val='roc_confusion')
+
+	if 'lr_xgb_2stage' not in rocaucs_dict:
+		rocaucs_dict['lr_xgb_2stage'] = []
+	rocaucs_dict['lr_xgb_2stage'].append(avg_rocauc)
+
+	if 'lr_xgb_2stage' not in confusions_dict:
+		confusions_dict['lr_xgb_2stage'] = []
+	confusions_dict['lr_xgb_2stage'].append(confusions)
+
+	print()
+
+
+	### SVC --> XGB 2-STAGE MODEL ###
+	svc_params = {
+		'C': np.logspace(-3, 2, 100),
+		'gamma': np.logspace(-3, 2, 100),
+		'kernel': ['linear', 'rbf', 'poly']
+	}
+	stage1 = RandomizedSearchCV(SVC(), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+
+	xgb_params = {
+		'n_estimators': randint(50, 500),
+		'max_depth': randint(3, 10),
+		'learning_rate': np.logspace(-2, 0, 100),
+		'min_child_weight': randint(1, 5),
+		'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	}
+	stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	print('SVC + XGB 2-STAGE ENSEMBLE')
+
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, stage2,
+					verbose=True),
+				x, y,
+				random_state=random_state,
+				calibration_set_size=CALIBRATION_SET_SIZE,
+				return_val='roc_confusion')
+
+	if 'svc_xgb_2stage' not in rocaucs_dict:
+		rocaucs_dict['svc_xgb_2stage'] = []
+	rocaucs_dict['svc_xgb_2stage'].append(avg_rocauc)
+
+	if 'svc_xgb_2stage' not in confusions_dict:
+		confusions_dict['svc_xgb_2stage'] = []
+	confusions_dict['svc_xgb_2stage'].append(confusions)
+
+	print()
+
 
 	print()
 
