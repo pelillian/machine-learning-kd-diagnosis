@@ -41,7 +41,7 @@ USE_SMOTE = False
 RANDOM_STATES = [90007, 0, 2018, 525, 7, 10, 777, 16, 99, 2048]
 N_JOBS = 1
 ALLOW_INDETERMINATES = True
-CALIBRATION_SET_SIZE = 0.2 # how much of train-set to use for risk-calibration (FC-KD thresholds)
+CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
 
 # Load expanded dataset
 x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')

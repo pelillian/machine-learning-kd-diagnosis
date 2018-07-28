@@ -27,57 +27,64 @@ class StanfordModel:
 		self.rf_n_estimators = rf_n_estimators
 		self.rf_max_features = rf_max_features
 		self.verbose = verbose
+		self.calibrated = False
 
 		if self.verbose:
 			print("STANFORD KD ALGORITHM")
 			print("ABOUT TO GET DESTROYED BY USC")
 			print("#BEATtheFARM --- Fight On!")
 
-	def train(self, x_train, y_train):
-		### Linear Discriminant Analysis
+	# Train & Calibrate model (fit LDA and RF on half of train-set, perform calibration on other set)
+		# Store thresholds in self.{lda/rf}_{kd/fc}_threshold
+		# If refit=True, refit LDA and RF on entire train-set for inference
+	def train_calibrate(self, x_train, y_train, calibration_set_size=0.2, random_state=90007, refit=False):
+		# Split train and calibrate sets
+		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train, y_train, 
+			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
+
+		# Calibrate LDA
 		self.lda = LinearDiscriminantAnalysis()
-		self.lda.fit(x_train, y_train)
-		lda_train_proba = self.lda.predict_proba(x_train)[:, 1]
+		self.lda.fit(x_train_calibrate, y_train_calibrate)
+		lda_calibrate_proba = self.lda.predict_proba(x_calibrate)[:, 1]
+		self.lda_fc_threshold, self.lda_kd_threshold = get_fc_kd_thresholds(lda_calibrate_proba, y_calibrate)
 
-		self.lda_fc_threshold, self.lda_kd_threshold = get_fc_kd_thresholds(lda_train_proba, y_train)
-
-		indeterminate_train = np.array(np.logical_and(lda_train_proba > self.lda_fc_threshold, lda_train_proba < self.lda_kd_threshold))
-
-		x_indeterminate_train = x_train[indeterminate_train]
-		y_indeterminate_train = y_train[indeterminate_train]
-
-		### Random Forest ###
+		# Calibrate RF
 		self.rf = RandomForestClassifier(n_estimators=self.rf_n_estimators, max_features=self.rf_max_features)
+		self.rf.fit(x_train_calibrate, y_train_calibrate)
+		rf_calibrate_proba = self.lda.predict_proba(x_calibrate)[:, 1]
+		self.rf_fc_threshold, self.rf_kd_threshold = get_fc_kd_thresholds(rf_calibrate_proba, y_calibrate)
+
+		# Refit on entire train-set after calibration
+		if refit == True:
+			self.lda.fit(x_train, y_train)
+			self.rf.fit(x_train, y_train)
+
+		self.calibrated = True
+
+	# Train only (fit LDA and RF) -- don't calibrate
+	def train(self, x_train, y_train):
+		self.lda.fit(x_train, y_train)
 		self.rf.fit(x_train, y_train)
-		rf_train_proba = self.rf.predict_proba(x_indeterminate_train)[:, 1]
-
-		final_proba = np.copy(lda_train_proba)
-		final_proba[indeterminate_train] = rf_train_proba
-
-		final_roc = roc_curve(y_train, final_proba)
-		return auc(final_roc[0], final_roc[1])
 
 	# Predict on x_test, return probability that each patient is KD
 	def predict_proba(self, x_test):
+		if self.calibrated == False:
+			print('WARNING: called predict_proba on Stanford model without pre-calibrating!')
+
 		### Test ###
 		lda_test_proba = self.lda.predict_proba(x_test)[:, 1]
 		indeterminate_test = np.array(np.logical_and(lda_test_proba > self.lda_fc_threshold, lda_test_proba < self.lda_kd_threshold))
 
 		x_indeterminate_test = x_test[indeterminate_test]
 
-		rf_test_proba = self.rf.predict_proba(x_indeterminate_test)[:, 1]
-
-		# lda_fc = np.array(lda_test_proba <= self.lda_fc_threshold)
-		# lda_kd = np.array(lda_test_proba >= self.lda_kd_threshold)
-
-		# rf_fc = np.array(rf_test_proba <= self.rf_fc_threshold)
-		# rf_kd = np.array(rf_test_proba >= self.rf_kd_threshold)
-
-		final_indeterminate_test = np.zeros(indeterminate_test.shape, dtype=bool)
-		final_indeterminate_test[indeterminate_test] = np.array(np.logical_and(rf_test_proba > self.rf_fc_threshold, rf_test_proba < self.rf_kd_threshold))
-
 		final_proba = np.copy(lda_test_proba)
-		final_proba[indeterminate_test] = rf_test_proba
+		
+		# If there are indeterminates, use RF to generate stage-2 predictions
+		if x_indeterminate_test.shape[0] > 0:
+			rf_test_proba = self.rf.predict_proba(x_indeterminate_test)[:, 1]
+			final_indeterminate_test = np.zeros(indeterminate_test.shape, dtype=bool)
+			final_indeterminate_test[indeterminate_test] = np.array(np.logical_and(rf_test_proba > self.rf_fc_threshold, rf_test_proba < self.rf_kd_threshold))
+			final_proba[indeterminate_test] = rf_test_proba
 
 		return final_proba
 
