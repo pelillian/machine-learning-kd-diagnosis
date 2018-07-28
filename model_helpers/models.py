@@ -117,7 +117,7 @@ def compute_indeterminate_confusion(y_prob, y_test, fc_kd_thresholds=None):
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
 def test_model(model, x, y, 
 		threshold=0.5, allow_indeterminates=True, 
-		calibration_set_size=0.2,
+		calibration_set_size=0.5,
 		return_val='roc_auc', random_state=90007):
 	stats_arr = []
 	best_scores = []
@@ -128,12 +128,12 @@ def test_model(model, x, y,
 		# Unpack CV split
 		x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
 		# Separate risk-calibration set
-		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train_all, y_train_all, 
+		x_train, x_calibrate, y_train, y_calibrate = train_test_split(x_train_all, y_train_all, 
 			test_size=calibration_set_size, random_state=random_state, stratify=y_train_all)
 
 		### ROC EVALUATION ###
-		# Train on entire train-set
-		best_score = model.train(x_train_all, y_train_all)
+		# Train on non-calibration train set
+		best_score = model.train(x_train, y_train)
 		best_scores.append(best_score)
 		y_prob = model.predict_proba(x_test)
 		y_pred = model.predict(x_test, threshold=threshold)
@@ -148,7 +148,6 @@ def test_model(model, x, y,
 		if allow_indeterminates == False:
 			stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix with 1 set threshold
 		else:
-			model.train(x_train_calibrate, y_train_calibrate) # re-train on just non-calibration set
 			y_calibrate_prob = model.predict_proba(x_calibrate)
 			y_test_prob = model.predict_proba(x_test)
 			fc_kd_thresholds = get_fc_kd_thresholds(y_calibrate_prob, y_calibrate) # risk calibration
@@ -170,9 +169,9 @@ def test_model(model, x, y,
 		return (np.mean(oos_roc_scores), total_confusion)
 
 
-# Train and evaluate model using K-Fold CV, print out results, return ROC curves from each split
+# Train and evaluate 2-stage model using K-Fold CV, print out results, return ROC curves from each split
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
-def test_stanford_model(model, x, y, calibration_set_size=0.2, return_val='roc_auc', random_state=90007):
+def test_2stage_model(model, x, y, calibration_set_size=0.5, return_val='roc_auc', random_state=90007):
 	stats_arr = []
 	# best_scores = [] (no best score because no GridSearchCV)
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -182,14 +181,10 @@ def test_stanford_model(model, x, y, calibration_set_size=0.2, return_val='roc_a
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
 		x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
-
-		# Separate risk-calibration set
-		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train_all, y_train_all, 
-			test_size=calibration_set_size, random_state=random_state, stratify=y_train_all)
 		
-		### ROC EVALUATION ###
-		# calibrate thresholds and refit individual learners on whole train-set
-		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=True) 
+		### --- ROC EVALUATION --- ###
+		# Pestage2orm model-training and risk-calibration
+		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
 
 		# Get ROC curve
@@ -197,36 +192,35 @@ def test_stanford_model(model, x, y, calibration_set_size=0.2, return_val='roc_a
 		oos_roc_curves.append(roc)
 		oos_roc_scores.append(auc(roc[0], roc[1]))
 
-		### CONFUSION/THRESHOLDING EVALUATION ###
-		model.train(x_train_calibrate, y_train_calibrate) # refit only; don't re-calibrate (already calibrated)
-		lda_y_prob = model.lda.predict_proba(x_test)[:, 1]
-		rf_y_prob = model.lda.predict_proba(x_test)[:, 1]
+		### --- CONFUSION/THRESHOLDING EVALUATION --- ###
+		stage1_y_prob = model.stage1.predict_proba(x_test)[:, 1]
+		stage2_y_prob = model.stage2.predict_proba(x_test)[:, 1]
 		y_prob = model.predict_proba(x_test)
 
-		# Perform prediction thresholding
-		lda_fc_threshold, lda_kd_threshold = get_fc_kd_thresholds(model.lda.predict_proba(x_calibrate)[:, 1], y_calibrate)
-		rf_fc_threshold, rf_kd_threshold = get_fc_kd_thresholds(model.rf.predict_proba(x_calibrate)[:, 1], y_calibrate)
+		# Get thresholds from prior calibration
+		stage1_fc_threshold, stage1_kd_threshold = model.stage1_fc_threshold, model.stage1_kd_threshold
+		stage2_fc_threshold, stage2_kd_threshold = model.stage2_fc_threshold, model.stage2_kd_threshold
 
-		# Stage 1: LDA
-		lda_fc_binary = np.array(lda_y_prob <= lda_fc_threshold).astype(np.int32) # where lda_y_prob <= lda_fc_threshold
-		lda_kd_binary = np.array(lda_y_prob >= lda_kd_threshold).astype(np.int32) # where lda_y_prob >= lda_kd_threshold
-		lda_indeterminate_binary = np.array(np.logical_and(lda_y_prob > lda_fc_threshold, lda_y_prob < lda_kd_threshold)).astype(np.int32)
-		lda_indeterminate_inds = np.argwhere(lda_indeterminate_binary == 1)
+		# Stage 1 predictions
+		stage1_fc_binary = np.array(stage1_y_prob <= stage1_fc_threshold).astype(np.int32) # where stage1_y_prob <= stage1_fc_threshold
+		stage1_kd_binary = np.array(stage1_y_prob >= stage1_kd_threshold).astype(np.int32) # where stage1_y_prob >= stage1_kd_threshold
+		stage1_indeterminate_binary = np.array(np.logical_and(stage1_y_prob > stage1_fc_threshold, stage1_y_prob < stage1_kd_threshold)).astype(np.int32)
+		stage1_indeterminate_inds = np.argwhere(stage1_indeterminate_binary == 1)
 
-		# Stage 2: RF
-		final_fc_binary = np.copy(lda_fc_binary)
-		final_kd_binary = np.copy(lda_kd_binary)
-		final_indeterminate_binary = np.copy(lda_indeterminate_binary)
+		# Prep for Stage 2
+		final_fc_binary = np.copy(stage1_fc_binary)
+		final_kd_binary = np.copy(stage1_kd_binary)
+		final_indeterminate_binary = np.copy(stage1_indeterminate_binary)
 
-		# Get RF predictions
-		rf_fc_binary = np.array(rf_y_prob <= rf_fc_threshold).astype(np.int32) # where rf_y_prob <= rf_fc_threshold
-		rf_kd_binary = np.array(rf_y_prob >= rf_kd_threshold).astype(np.int32) # where rf_y_prob <= rf_fc_threshold
-		rf_non_indeterminate = np.array(np.logical_or(rf_fc_binary, rf_kd_binary)) # where a prediction was made by RF (non-indeterminate)
+		# Stage 2 predictions
+		stage2_fc_binary = np.array(stage2_y_prob <= stage2_fc_threshold).astype(np.int32) # where stage2_y_prob <= stage2_fc_threshold
+		stage2_kd_binary = np.array(stage2_y_prob >= stage2_kd_threshold).astype(np.int32) # where stage2_y_prob <= stage2_fc_threshold
+		stage2_non_indeterminate = np.array(np.logical_or(stage2_fc_binary, stage2_kd_binary)) # where a prediction was made by stage2 (non-indeterminate)
 
-		# Apply RF predictions
-		final_fc_binary[lda_indeterminate_inds] = rf_fc_binary[lda_indeterminate_inds] # apply RF FC predictions to indeterminates
-		final_kd_binary[lda_indeterminate_inds] = rf_kd_binary[lda_indeterminate_inds] # apply RF KD predictions to indeterminates
-		final_indeterminate_binary[lda_indeterminate_inds] = rf_non_indeterminate[lda_indeterminate_inds] # update indeterminate entries
+		# Apply stage2 predictions
+		final_fc_binary[stage1_indeterminate_inds] = stage2_fc_binary[stage1_indeterminate_inds] # apply stage2 FC predictions to indeterminates
+		final_kd_binary[stage1_indeterminate_inds] = stage2_kd_binary[stage1_indeterminate_inds] # apply stage2 KD predictions to indeterminates
+		final_indeterminate_binary[stage1_indeterminate_inds] = stage2_non_indeterminate[stage1_indeterminate_inds] # update indeterminate entries
 
 		# Get TP, TN, FP, FN, Indeterminates
 		true_negatives = np.sum(final_fc_binary * (1 - y_test)) # fc_binary = 1 and y_test = 0
@@ -337,4 +331,83 @@ class ScikitModel:
 	# Train on x_train and y_train, and predict on x_test
 	def train_test(self, x_train, x_test, y_train, y_test, threshold=0.5):
 		self.train(x_train, y_train)
+		return self.predict(x_test, threshold=threshold)
+
+
+
+# 2-stage model wrapper class
+class TwoStageModel:
+	def __init__(self, stage1_model, stage2_model,
+			stage2_fc_threshold=0.4, stage2_kd_threshold=0.6,
+			verbose=True): # had to hardcode thresholds because they overlapped
+		self.stage1 = stage1_model
+		self.stage2 = stage2_model
+
+		self.stage2_fc_threshold = stage2_fc_threshold
+		self.stage2_kd_threshold = stage2_kd_threshold
+
+		self.verbose = verbose
+		self.calibrated = False
+
+	# Train & Calibrate model (fit stage1 and stage2 on half of train-set, perform calibration on other set)
+		# Store thresholds in self.{stage1/stage2}_{kd/fc}_threshold
+		# If refit=True, refit stage1 and stage2 on entire train-set for inference
+	def train_calibrate(self, x_train, y_train, calibration_set_size=0.5, random_state=90007, refit=False):
+		# Split train and calibrate sets
+		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train, y_train, 
+			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
+
+		# Calibrate stage1
+		self.stage1.fit(x_train_calibrate, y_train_calibrate)
+		stage1_calibrate_proba = self.stage1.predict_proba(x_calibrate)[:, 1]
+		self.stage1_fc_threshold, self.stage1_kd_threshold = get_fc_kd_thresholds(stage1_calibrate_proba, y_calibrate)
+
+		# Calibrate stage2
+		self.stage2.fit(x_train_calibrate, y_train_calibrate)
+		stage2_calibrate_proba = self.stage1.predict_proba(x_calibrate)[:, 1]
+		self.stage2_fc_threshold, self.stage2_kd_threshold = get_fc_kd_thresholds(stage2_calibrate_proba, y_calibrate)
+
+		# Refit on entire train-set after calibration
+		if refit == True:
+			self.stage1.fit(x_train, y_train)
+			self.stage2.fit(x_train, y_train)
+
+		self.calibrated = True
+
+	# Train only (fit stage1 and stage2) -- don't calibrate
+	def train(self, x_train, y_train):
+		self.stage1.fit(x_train, y_train)
+		self.stage2.fit(x_train, y_train)
+
+	# Predict on x_test, return probability that each patient is KD
+	def predict_proba(self, x_test):
+		if self.calibrated == False:
+			print('WARNING: called predict_proba on Stanford model without pre-calibrating!')
+
+		### Test ###
+		stage1_test_proba = self.stage1.predict_proba(x_test)[:, 1]
+		indeterminate_test = np.array(np.logical_and(stage1_test_proba > self.stage1_fc_threshold, stage1_test_proba < self.stage1_kd_threshold))
+
+		x_indeterminate_test = x_test[indeterminate_test]
+
+		final_proba = np.copy(stage1_test_proba)
+		
+		# If there are indeterminates, use stage2 to generate stage-2 predictions
+		if x_indeterminate_test.shape[0] > 0:
+			stage2_test_proba = self.stage2.predict_proba(x_indeterminate_test)[:, 1]
+			final_indeterminate_test = np.zeros(indeterminate_test.shape, dtype=bool)
+			final_indeterminate_test[indeterminate_test] = np.array(np.logical_and(stage2_test_proba > self.stage2_fc_threshold, stage2_test_proba < self.stage2_kd_threshold))
+			final_proba[indeterminate_test] = stage2_test_proba
+
+		return final_proba
+
+	# Predict on x_test, return binary y_pred
+	def predict(self, x_test, threshold=0.5):
+		y_prob = self.predict_proba(x_test) # probability of KD
+		y_pred = apply_threshold(y_prob, threshold)
+		return y_pred
+
+	# Train on x_train and y_train, and predict on x_test
+	def train_test(self, x_train, x_test, y_train, y_test, threshold=0.5):
+		self.train_calibrate(x_train, y_train)
 		return self.predict(x_test, threshold=threshold)

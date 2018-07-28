@@ -14,7 +14,7 @@ from scipy.stats import randint
 from collections import Counter
 import json
 
-from stanford_kd_algorithm import StanfordModel
+# from stanford_kd_algorithm import TwoStageModel
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
@@ -25,6 +25,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, VotingClassifier
 import xgboost as xgb
 
@@ -56,7 +57,13 @@ for random_state in RANDOM_STATES:
 	print("")
 
 	#### Stanford Algorithm ####
-	avg_rocauc, confusions = test_stanford_model(StanfordModel(
+	print("STANFORD KD ALGORITHM")
+	print("ABOUT TO GET DESTROYED BY USC")
+	print("#BEATtheFARM --- Fight On!")
+	stage1 = LinearDiscriminantAnalysis()
+	stage2 = RandomForestClassifier(n_estimators=300, max_features=1/3)
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, stage2,
 					verbose=True),
 				x, y,
 				random_state=random_state,
