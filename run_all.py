@@ -342,10 +342,38 @@ for random_state in RANDOM_STATES:
 	print()
 
 
-	### LDA --> XGB 2-STAGE MODEL ###
+	### LDA --> VOTING-ENSEMBLE 2-STAGE MODEL ###
 	stage1 = LinearDiscriminantAnalysis()
-	stage2 = xgb.XGBClassifier(n_estimators=300, max_depth=7)
-	print('LDA + XGB 2-STAGE ENSEMBLE')
+	
+	clf1 = SVC(probability=True)
+	clf2 = LogisticRegression()
+	clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
+
+	eclf = VotingClassifier(
+	    estimators=[
+	    	('svm', clf1), 
+	    	('lr', clf2),
+	    	('xgb', clf3)
+	    ],
+	    voting='soft',
+	    n_jobs=N_JOBS
+	)
+	eclf_params = {
+	    'svm__C': np.logspace(-3, 2, 100),
+		'svm__gamma': np.logspace(-3, 2, 100),
+		'svm__kernel': ['rbf', 'poly'],
+	    'lr__C': np.logspace(-3, 2, 100),
+		'xgb__n_estimators': randint(50, 500),
+		'xgb__max_depth': randint(3, 10),
+		'xgb__learning_rate': np.logspace(-2, 0, 100),
+		'xgb__min_child_weight': randint(1, 5),
+		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	}
+
+	stage2 = RandomizedSearchCV(eclf, eclf_params, cv=5, n_iter=25, scoring='accuracy', verbose=1, n_jobs=1)
+
+	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE')
 
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, stage2,
@@ -356,40 +384,40 @@ for random_state in RANDOM_STATES:
 				calibration_set_size=CALIBRATION_SET_SIZE,
 				return_val='roc_confusion')
 
-	if 'lda_xgb_2stage' not in rocaucs_dict:
-		rocaucs_dict['lda_xgb_2stage'] = []
-	rocaucs_dict['lda_xgb_2stage'].append(avg_rocauc)
+	if 'lda_voting_2stage' not in rocaucs_dict:
+		rocaucs_dict['lda_voting_2stage'] = []
+	rocaucs_dict['lda_voting_2stage'].append(avg_rocauc)
 
-	if 'lda_xgb_2stage' not in confusions_dict:
-		confusions_dict['lda_xgb_2stage'] = []
-	confusions_dict['lda_xgb_2stage'].append(confusions)
-
-	print()
-
-
-	### LDA --> SVC 2-STAGE MODEL ###
-	stage1 = LinearDiscriminantAnalysis()
-	stage2 = SVC(kernel='rbf', probability=True)
-	print('LDA + SVC 2-STAGE ENSEMBLE')
-
-	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-					stage1, stage2,
-					verbose=True),
-				x, y,
-				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state,
-				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
-
-	if 'lda_svc_2stage' not in rocaucs_dict:
-		rocaucs_dict['lda_svc_2stage'] = []
-	rocaucs_dict['lda_svc_2stage'].append(avg_rocauc)
-
-	if 'lda_svc_2stage' not in confusions_dict:
-		confusions_dict['lda_svc_2stage'] = []
-	confusions_dict['lda_svc_2stage'].append(confusions)
+	if 'lda_voting_2stage' not in confusions_dict:
+		confusions_dict['lda_voting_2stage'] = []
+	confusions_dict['lda_voting_2stage'].append(confusions)
 
 	print()
+
+
+	# ### LDA --> SVC 2-STAGE MODEL ###
+	# stage1 = LinearDiscriminantAnalysis()
+	# stage2 = SVC(kernel='rbf', probability=True)
+	# print('LDA + SVC 2-STAGE ENSEMBLE')
+
+	# avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+	# 				stage1, stage2,
+	# 				verbose=True),
+	# 			x, y,
+	# 			allow_indeterminates=ALLOW_INDETERMINATES,
+	# 			random_state=random_state,
+	# 			calibration_set_size=CALIBRATION_SET_SIZE,
+	# 			return_val='roc_confusion')
+
+	# if 'lda_svc_2stage' not in rocaucs_dict:
+	# 	rocaucs_dict['lda_svc_2stage'] = []
+	# rocaucs_dict['lda_svc_2stage'].append(avg_rocauc)
+
+	# if 'lda_svc_2stage' not in confusions_dict:
+	# 	confusions_dict['lda_svc_2stage'] = []
+	# confusions_dict['lda_svc_2stage'].append(confusions)
+
+	# print()
 
 
 
