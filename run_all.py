@@ -45,7 +45,7 @@ ALLOW_INDETERMINATES = True
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
 
 # Load expanded dataset
-x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean')
+x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=False)
 
 rocaucs_dict = {}
 confusions_dict = {}
@@ -251,44 +251,44 @@ for random_state in RANDOM_STATES:
 	print()
 
 
-	### Bagging SVC ###
-	bag_svm_params = {
-		'base_estimator__C': np.logspace(-3, 2, 100),
-		'base_estimator__gamma': np.logspace(-3, 2, 100),
-		'base_estimator__kernel': ['linear', 'rbf', 'poly'],
-		'base_estimator__probability': [True, False],
-		'n_estimators': randint(5, 50),
-		"max_samples": np.logspace(-0.9, 0, 100),
-		"max_features": randint(10, x.shape[1])
-	}
-	bagging_svc = BaggingClassifier(
-		base_estimator=SVC(),
-		bootstrap=True,
-		bootstrap_features=False,
-		n_jobs=N_JOBS
-	)
-	print("SVC BAGGING")
-	avg_rocauc, confusions = test_model(ScikitModel(
-					bagging_svc,
-					params=bag_svm_params,
-					random_search=True,
-					n_iter=25,
-					verbose=1),
-				x, y,
-				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state,
-				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+	# ### Bagging SVC ###
+	# bag_svm_params = {
+	# 	'base_estimator__C': np.logspace(-3, 2, 100),
+	# 	'base_estimator__gamma': np.logspace(-3, 2, 100),
+	# 	'base_estimator__kernel': ['linear', 'rbf', 'poly'],
+	# 	'base_estimator__probability': [True, False],
+	# 	'n_estimators': randint(5, 50),
+	# 	"max_samples": np.logspace(-0.9, 0, 100),
+	# 	"max_features": randint(10, x.shape[1])
+	# }
+	# bagging_svc = BaggingClassifier(
+	# 	base_estimator=SVC(),
+	# 	bootstrap=True,
+	# 	bootstrap_features=False,
+	# 	n_jobs=N_JOBS
+	# )
+	# print("SVC BAGGING")
+	# avg_rocauc, confusions = test_model(ScikitModel(
+	# 				bagging_svc,
+	# 				params=bag_svm_params,
+	# 				random_search=True,
+	# 				n_iter=25,
+	# 				verbose=1),
+	# 			x, y,
+	# 			allow_indeterminates=ALLOW_INDETERMINATES,
+	# 			random_state=random_state,
+	# 			calibration_set_size=CALIBRATION_SET_SIZE,
+	# 			return_val='roc_confusion')
 
-	if 'svc_bag' not in rocaucs_dict:
-		rocaucs_dict['svc_bag'] = []
-	rocaucs_dict['svc_bag'].append(avg_rocauc)
+	# if 'svc_bag' not in rocaucs_dict:
+	# 	rocaucs_dict['svc_bag'] = []
+	# rocaucs_dict['svc_bag'].append(avg_rocauc)
 
-	if 'svc_bag' not in confusions_dict:
-		confusions_dict['svc_bag'] = []
-	confusions_dict['svc_bag'].append(confusions)
+	# if 'svc_bag' not in confusions_dict:
+	# 	confusions_dict['svc_bag'] = []
+	# confusions_dict['svc_bag'].append(confusions)
 
-	print()
+	# print()
 
 
 	### Voting Ensemble ###
@@ -341,12 +341,8 @@ for random_state in RANDOM_STATES:
 	print()
 
 
-	### LR --> XGB 2-STAGE MODEL ###
-	lr_params = {
-		'C': np.logspace(-2, 2, 5)
-	}
-	stage1 = GridSearchCV(LogisticRegression(), lr_params, cv=5, scoring='roc_auc', verbose=1)
-
+	### LDA --> XGB 2-STAGE MODEL ###
+	stage1 = LinearDiscriminantAnalysis()
 	xgb_params = {
 		'n_estimators': randint(50, 500),
 		'max_depth': randint(3, 10),
@@ -356,7 +352,7 @@ for random_state in RANDOM_STATES:
 		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
 	stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
-	print('LR + XGB 2-STAGE ENSEMBLE')
+	print('LDA + XGB 2-STAGE ENSEMBLE')
 
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, stage2,
@@ -366,53 +362,53 @@ for random_state in RANDOM_STATES:
 				calibration_set_size=CALIBRATION_SET_SIZE,
 				return_val='roc_confusion')
 
-	if 'lr_xgb_2stage' not in rocaucs_dict:
-		rocaucs_dict['lr_xgb_2stage'] = []
-	rocaucs_dict['lr_xgb_2stage'].append(avg_rocauc)
+	if 'lda_xgb_2stage' not in rocaucs_dict:
+		rocaucs_dict['lda_xgb_2stage'] = []
+	rocaucs_dict['lda_xgb_2stage'].append(avg_rocauc)
 
-	if 'lr_xgb_2stage' not in confusions_dict:
-		confusions_dict['lr_xgb_2stage'] = []
-	confusions_dict['lr_xgb_2stage'].append(confusions)
-
-	print()
-
-
-	### SVC --> XGB 2-STAGE MODEL ###
-	svc_params = {
-		'C': np.logspace(-3, 2, 100),
-		'gamma': np.logspace(-3, 2, 100),
-		'kernel': ['linear', 'rbf', 'poly']
-	}
-	stage1 = RandomizedSearchCV(SVC(probability=True), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
-
-	xgb_params = {
-		'n_estimators': randint(50, 500),
-		'max_depth': randint(3, 10),
-		'learning_rate': np.logspace(-2, 0, 100),
-		'min_child_weight': randint(1, 5),
-		'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
-		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
-	}
-	stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
-	print('SVC + XGB 2-STAGE ENSEMBLE')
-
-	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-					stage1, stage2,
-					verbose=True),
-				x, y,
-				random_state=random_state,
-				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
-
-	if 'svc_xgb_2stage' not in rocaucs_dict:
-		rocaucs_dict['svc_xgb_2stage'] = []
-	rocaucs_dict['svc_xgb_2stage'].append(avg_rocauc)
-
-	if 'svc_xgb_2stage' not in confusions_dict:
-		confusions_dict['svc_xgb_2stage'] = []
-	confusions_dict['svc_xgb_2stage'].append(confusions)
+	if 'lda_xgb_2stage' not in confusions_dict:
+		confusions_dict['lda_xgb_2stage'] = []
+	confusions_dict['lda_xgb_2stage'].append(confusions)
 
 	print()
+
+
+	# ### SVC --> XGB 2-STAGE MODEL ###
+	# svc_params = {
+	# 	'C': np.logspace(-3, 2, 100),
+	# 	'gamma': np.logspace(-3, 2, 100),
+	# 	'kernel': ['linear', 'rbf', 'poly']
+	# }
+	# stage1 = RandomizedSearchCV(SVC(probability=True), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+
+	# xgb_params = {
+	# 	'n_estimators': randint(50, 500),
+	# 	'max_depth': randint(3, 10),
+	# 	'learning_rate': np.logspace(-2, 0, 100),
+	# 	'min_child_weight': randint(1, 5),
+	# 	'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+	# 	'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	# }
+	# stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	# print('SVC + XGB 2-STAGE ENSEMBLE')
+
+	# avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+	# 				stage1, stage2,
+	# 				verbose=True),
+	# 			x, y,
+	# 			random_state=random_state,
+	# 			calibration_set_size=CALIBRATION_SET_SIZE,
+	# 			return_val='roc_confusion')
+
+	# if 'svc_xgb_2stage' not in rocaucs_dict:
+	# 	rocaucs_dict['svc_xgb_2stage'] = []
+	# rocaucs_dict['svc_xgb_2stage'].append(avg_rocauc)
+
+	# if 'svc_xgb_2stage' not in confusions_dict:
+	# 	confusions_dict['svc_xgb_2stage'] = []
+	# confusions_dict['svc_xgb_2stage'].append(confusions)
+
+	# print()
 
 
 	print()
