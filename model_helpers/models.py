@@ -178,6 +178,10 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 	oos_roc_curves = [] # out-of-sample ROC curves
 	oos_roc_scores = [] # out-of-sample ROC scores
 
+	num_stage1_kd = []
+	num_stage1_fc = []
+	num_stage1_indeterminate = []
+
 	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
@@ -207,6 +211,11 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 		stage1_kd_binary = np.array(stage1_y_prob >= stage1_kd_threshold).astype(np.int32) # where stage1_y_prob >= stage1_kd_threshold
 		stage1_indeterminate_binary = np.array(np.logical_and(stage1_y_prob > stage1_fc_threshold, stage1_y_prob < stage1_kd_threshold)).astype(np.int32)
 		stage1_indeterminate_inds = np.argwhere(stage1_indeterminate_binary == 1)
+
+		# Record how many patients are KD/FC/indeterminate after stage 1
+		num_stage1_kd.append(np.sum(stage1_fc_binary))
+		num_stage1_fc.append(np.sum(stage1_kd_binary))
+		num_stage1_indeterminate.append(np.sum(stage1_indeterminate_binary))
 
 		# Prep for Stage 2
 		final_fc_binary = np.copy(stage1_fc_binary)
@@ -253,7 +262,7 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 
 			stats_arr.append((true_negatives, false_positives, false_negatives, true_positives))
 		
-
+	print('Total Stage-1 KD/FC/Indeterminate: {}/{}/{}'.format(np.sum(num_stage1_kd), np.sum(num_stage1_fc), np.sum(num_stage1_indeterminate)))
 	print('CV Confusion: ', stats_arr)
 	print('Avg out-of-sample ROCAUC: ', np.mean(oos_roc_scores))
 

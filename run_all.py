@@ -35,6 +35,10 @@ from model_helpers.models import *
 
 from preprocess import load_data
 
+# Ignore 'Truth value of an array is ambiguous' warning bug: https://stackoverflow.com/questions/49545947/sklearn-deprecationwarning-truth-value-of-an-array
+import warnings
+warnings.filterwarnings(module='sklearn*', action='ignore', category=DeprecationWarning)
+
 # Beta for fbeta_score
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "none" # set to "none" or "balanced"
