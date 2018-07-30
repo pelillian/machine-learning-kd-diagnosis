@@ -41,7 +41,7 @@ CLASS_WEIGHT = "none" # set to "none" or "balanced"
 USE_SMOTE = False
 RANDOM_STATES = [90007, 0, 2018, 525, 7, 10, 777, 16, 99, 2048]
 N_JOBS = 1
-ALLOW_INDETERMINATES = True
+ALLOW_INDETERMINATES = False
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
 
 # Load expanded dataset
@@ -369,7 +369,7 @@ for random_state in RANDOM_STATES:
 
 	### LDA --> SVC 2-STAGE MODEL ###
 	stage1 = LinearDiscriminantAnalysis()
-	stage2 = SVC(kernel='rbf')
+	stage2 = SVC(kernel='rbf', probability=True)
 	print('LDA + SVC 2-STAGE ENSEMBLE')
 
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
