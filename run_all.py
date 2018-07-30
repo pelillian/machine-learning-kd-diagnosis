@@ -412,7 +412,7 @@ print('--- Average confusion info: ---')
 for model, results_list in confusions_dict.items():
 	print('{} results:'.format(model))
 	avg_confusion = np.mean(results_list, axis=0)
-	explain_confusion(avg_confusion, indeterminates=True)
+	explain_confusion(avg_confusion, indeterminates=ALLOW_INDETERMINATES)
 	print()
 
 with open('results_json.txt', 'w') as resultsfile:
