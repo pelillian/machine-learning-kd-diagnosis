@@ -66,6 +66,7 @@ for random_state in RANDOM_STATES:
 					stage1, stage2,
 					verbose=True),
 				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
 				return_val='roc_confusion')
@@ -343,21 +344,14 @@ for random_state in RANDOM_STATES:
 
 	### LDA --> XGB 2-STAGE MODEL ###
 	stage1 = LinearDiscriminantAnalysis()
-	xgb_params = {
-		'n_estimators': randint(50, 500),
-		'max_depth': randint(3, 10),
-		'learning_rate': np.logspace(-2, 0, 100),
-		'min_child_weight': randint(1, 5),
-		'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
-		'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
-	}
-	stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	stage2 = xgb.XGBClassifier(n_estimators=300, max_depth=7)
 	print('LDA + XGB 2-STAGE ENSEMBLE')
 
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, stage2,
 					verbose=True),
 				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
 				return_val='roc_confusion')
@@ -373,42 +367,30 @@ for random_state in RANDOM_STATES:
 	print()
 
 
-	# ### SVC --> XGB 2-STAGE MODEL ###
-	# svc_params = {
-	# 	'C': np.logspace(-3, 2, 100),
-	# 	'gamma': np.logspace(-3, 2, 100),
-	# 	'kernel': ['linear', 'rbf', 'poly']
-	# }
-	# stage1 = RandomizedSearchCV(SVC(probability=True), svc_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
+	### LDA --> SVC 2-STAGE MODEL ###
+	stage1 = LinearDiscriminantAnalysis()
+	stage2 = SVC(kernel='rbf')
+	print('LDA + SVC 2-STAGE ENSEMBLE')
 
-	# xgb_params = {
-	# 	'n_estimators': randint(50, 500),
-	# 	'max_depth': randint(3, 10),
-	# 	'learning_rate': np.logspace(-2, 0, 100),
-	# 	'min_child_weight': randint(1, 5),
-	# 	'subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
-	# 	'colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
-	# }
-	# stage2 = RandomizedSearchCV(xgb.XGBClassifier(), xgb_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1)
-	# print('SVC + XGB 2-STAGE ENSEMBLE')
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, stage2,
+					verbose=True),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state,
+				calibration_set_size=CALIBRATION_SET_SIZE,
+				return_val='roc_confusion')
 
-	# avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-	# 				stage1, stage2,
-	# 				verbose=True),
-	# 			x, y,
-	# 			random_state=random_state,
-	# 			calibration_set_size=CALIBRATION_SET_SIZE,
-	# 			return_val='roc_confusion')
+	if 'lda_svc_2stage' not in rocaucs_dict:
+		rocaucs_dict['lda_svc_2stage'] = []
+	rocaucs_dict['lda_svc_2stage'].append(avg_rocauc)
 
-	# if 'svc_xgb_2stage' not in rocaucs_dict:
-	# 	rocaucs_dict['svc_xgb_2stage'] = []
-	# rocaucs_dict['svc_xgb_2stage'].append(avg_rocauc)
+	if 'lda_svc_2stage' not in confusions_dict:
+		confusions_dict['lda_svc_2stage'] = []
+	confusions_dict['lda_svc_2stage'].append(confusions)
 
-	# if 'svc_xgb_2stage' not in confusions_dict:
-	# 	confusions_dict['svc_xgb_2stage'] = []
-	# confusions_dict['svc_xgb_2stage'].append(confusions)
+	print()
 
-	# print()
 
 
 	print()
