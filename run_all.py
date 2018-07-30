@@ -45,7 +45,7 @@ ALLOW_INDETERMINATES = False
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
 
 # Load expanded dataset
-x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=False)
+x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=True)
 
 rocaucs_dict = {}
 confusions_dict = {}
