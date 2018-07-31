@@ -60,6 +60,9 @@ for random_state in RANDOM_STATES:
 	print("------- RANDOM STATE: {} -------".format(random_state))
 	print("")
 
+	# Manually set random seed at the start, in case random_state isn't passed into functions later on
+	np.random.seed(random_state)
+
 	#### Stanford Algorithm ####
 	print("STANFORD KD ALGORITHM")
 	print("ABOUT TO GET DESTROYED BY USC")
