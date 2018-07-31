@@ -59,11 +59,12 @@ def explain_confusion(stats, indeterminates=False):
 	# y_prob: predicted probabilities from trained model
 	# y_test: actual y labels
 	# threshold_step: granularity with which to test out various classification thresholds
+	# pv_threshold: PPV/NPV target for thresholds (default 0.95)
 	# Returns (fc_threshold, kd_threshold).
 		# If predicted score < fc_threshold, then predict FC
 		# If predicted score > kd_threshold, then predict KD
 		# If predicted score b/w (fc_threshold, kd_threshold), then indeterminate
-def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
+def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001, pv_threshold=0.95):
 	thresholds = np.arange(0.0, 1.0, step=threshold_step) # which thresholds to try
 	valid_thresholds_ppv = [] # thresholds where PPV >= 0.95
 	valid_thresholds_npv = [] # thresholds where NPV >= 0.95
@@ -75,9 +76,9 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001):
 		except: ppv = -1
 		try: npv = tn / (tn + fn) # NPV: negative predictive value
 		except: npv = -1
-		if ppv >= 0.95: 
+		if ppv >= pv_threshold: 
 			valid_thresholds_ppv.append(threshold)
-		if npv >= 0.95:
+		if npv >= pv_threshold:
 			valid_thresholds_npv.append(threshold)
 	# print(np.column_stack((y_prob, y_test)))
 	try: 
