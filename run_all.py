@@ -47,9 +47,11 @@ RANDOM_STATES = [90007, 0, 2018, 525, 7, 10, 777, 16, 99, 2048, 20, 21, 22, 23, 
 N_JOBS = 1
 ALLOW_INDETERMINATES = True
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
+REDUCED_FEATURES = True
+VERBOSE = True
 
 # Load expanded dataset
-x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=True)
+x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=REDUCED_FEATURES)
 
 rocaucs_dict = {}
 confusions_dict = {}
@@ -76,7 +78,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'stanford' not in rocaucs_dict:
 		rocaucs_dict['stanford'] = []
@@ -104,7 +107,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				calibration_set_size=CALIBRATION_SET_SIZE,
 				random_state=random_state,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'lr' not in rocaucs_dict:
 		rocaucs_dict['lr'] = []
@@ -136,7 +140,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'svc' not in rocaucs_dict:
 		rocaucs_dict['svc'] = []
@@ -194,7 +199,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'xgb' not in rocaucs_dict:
 		rocaucs_dict['xgb'] = []
@@ -246,7 +252,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'lr_bag' not in rocaucs_dict:
 		rocaucs_dict['lr_bag'] = []
@@ -337,7 +344,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'voting_clf_accuracy' not in rocaucs_dict:
 		rocaucs_dict['voting_clf_accuracy'] = []
@@ -388,7 +396,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'voting_clf_rocauc' not in rocaucs_dict:
 		rocaucs_dict['voting_clf_rocauc'] = []
@@ -441,7 +450,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'lda_voting_2stage_accuracy' not in rocaucs_dict:
 		rocaucs_dict['lda_voting_2stage_accuracy'] = []
@@ -494,7 +504,8 @@ for random_state in RANDOM_STATES:
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
 				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion')
+				return_val='roc_confusion',
+				verbose=VERBOSE)
 
 	if 'lda_voting_2stage_rocauc' not in rocaucs_dict:
 		rocaucs_dict['lda_voting_2stage_rocauc'] = []
@@ -540,6 +551,8 @@ for random_state in RANDOM_STATES:
 ### SUMMARIZE RESULTS ###
 print('\n---------- SUMMARY OF RESULTS ----------\n')
 print('Num. random seeds tested: {}'.format(len(RANDOM_STATES)))
+print('Reduced feature-set: ', REDUCED_FEATURES)
+print('Allow indeterminates: ', ALLOW_INDETERMINATES)
 print()
 
 print('--- Average of average out-of-sample ROCAUCs: ---')

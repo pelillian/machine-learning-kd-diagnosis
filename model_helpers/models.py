@@ -59,15 +59,15 @@ def explain_confusion(stats, indeterminates=False):
 	# y_prob: predicted probabilities from trained model
 	# y_test: actual y labels
 	# threshold_step: granularity with which to test out various classification thresholds
-	# pv_threshold: PPV/NPV target for thresholds (default 0.95)
+	# target_ppv_npv: PPV/NPV target for thresholds (default 0.95)
 	# Returns (fc_threshold, kd_threshold).
 		# If predicted score < fc_threshold, then predict FC
 		# If predicted score > kd_threshold, then predict KD
 		# If predicted score b/w (fc_threshold, kd_threshold), then indeterminate
-def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001, pv_threshold=0.95):
+def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001, target_ppv_npv=0.95):
 	thresholds = np.arange(0.0, 1.0, step=threshold_step) # which thresholds to try
-	valid_thresholds_ppv = [] # thresholds where PPV >= 0.95
-	valid_thresholds_npv = [] # thresholds where NPV >= 0.95
+	valid_thresholds_ppv = [] # thresholds where PPV >= target_ppv_npv
+	valid_thresholds_npv = [] # thresholds where NPV >= target_ppv_npv
 	
 	for threshold in thresholds: # Iterate over possible thresholds (TODO: binary search?)
 		y_pred = apply_threshold(y_prob, threshold)
@@ -76,9 +76,9 @@ def get_fc_kd_thresholds(y_prob, y_test, threshold_step=0.001, pv_threshold=0.95
 		except: ppv = -1
 		try: npv = tn / (tn + fn) # NPV: negative predictive value
 		except: npv = -1
-		if ppv >= pv_threshold: 
+		if ppv >= target_ppv_npv: 
 			valid_thresholds_ppv.append(threshold)
-		if npv >= pv_threshold:
+		if npv >= target_ppv_npv:
 			valid_thresholds_npv.append(threshold)
 	# print(np.column_stack((y_prob, y_test)))
 	try: 
@@ -136,7 +136,7 @@ def compute_calibrated_confusion(y_preds, y_test):
 def test_model(model, x, y, 
 		threshold=0.5, allow_indeterminates=True, 
 		calibration_set_size=0.5,
-		return_val='roc_auc', random_state=90007):
+		return_val='roc_auc', random_state=90007, verbose=False):
 	stats_arr = []
 	best_scores = []
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -156,6 +156,9 @@ def test_model(model, x, y,
 
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
+
+		if verbose == True:
+			print('FC-KD Thresholds: {}, {}'.format(model.fc_threhsold, model.kd_threshold))
 
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
@@ -198,7 +201,7 @@ def test_model(model, x, y,
 # Train and evaluate 2-stage model using K-Fold CV, print out results, return ROC curves from each split
 	# return_val: 'roc_auc' (OOS ROCAUC), 'roc_curves' (sklearn-style ROC curve), or 'roc_confusion' (ROC, Confusion tuple)
 def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.5,
-		calibration_set_size=0.5, return_val='roc_auc', random_state=90007):
+		calibration_set_size=0.5, return_val='roc_auc', random_state=90007, verbose=False):
 	stats_arr = []
 	# best_scores = [] (no best score because no GridSearchCV)
 	oos_roc_curves = [] # out-of-sample ROC curves
@@ -217,6 +220,10 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 		# Pestage2orm model-training and risk-calibration
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
+
+		if verbose == True:
+			print('Stage 1 FC-KD thresholds: {}, {}'.format(model.stage1_fc_threshold, model.stage1_kd_threshold))
+			print('Stage 2 FC-KD thresholds: {}, {}'.format(model.stage2_fc_threshold, model.stage2_kd_threshold))
 
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
