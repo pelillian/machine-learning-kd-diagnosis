@@ -329,6 +329,7 @@ class ScikitModel:
 		self.skmodel = skmodel
 		self.cv_scorer = 'roc_auc' if scoring=='roc_auc' else make_scorer(fbeta_score, beta=beta)
 		self.verbose = verbose
+		self.calibrated = False
 		if random_search == True: # Randomized grid search
 			self.paramsearch = RandomizedSearchCV(self.skmodel, params, cv=5, 
 										n_iter=n_iter,
@@ -348,6 +349,23 @@ class ScikitModel:
 			print('Best params: ', self.paramsearch.best_params_)
 			print('Best score: ', self.paramsearch.best_score_)
 		return self.paramsearch.best_score_ # return ROC-AUC or f-beta
+
+	# Train-Calibrate: Fit model on half of x_train, Risk-calibrate on other half
+	def train_calibrate(self, x_train, y_train, calibration_set_size=0.5, random_state=90007, refit=False):
+		# Split train and calibrate sets
+		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train, y_train, 
+			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
+
+		# Calibrate model
+		self.paramsearch.fit(x_train_calibrate, y_train_calibrate)
+		y_calibrate_proba = self.paramsearch.predict_proba(x_calibrate)[:, 1]
+		self.fc_threshold, self.kd_threshold = get_fc_kd_thresholds(y_calibrate_proba, y_calibrate)
+
+		# Refit on entire train-set after calibration
+		if refit == True:
+			self.paramsearch.fit(x_train, y_train)
+
+		self.calibrated = True
 	
 	# Predict on x_test, return probability that each patient is KD
 	def predict_proba(self, x_test):
@@ -358,6 +376,23 @@ class ScikitModel:
 	def predict(self, x_test, threshold=0.5):
 		y_prob = self.predict_proba(x_test) # probability of KD
 		y_pred = apply_threshold(y_prob, threshold)
+		return y_pred
+
+	# Return numpy array with calibrated predictions: 1 for KD, 0 for FC, -1 for indeterminate
+	def predict_calibrated(self, x_test, allow_indeterminates=True):
+		if self.calibrated == False:
+			print('WARNING: called predict_indeterminates() on Scikit model without pre-calibrating!')
+
+		y_prob = self.predict_proba(x_test) # KD scores, between 0-1
+		y_pred = np.repeat(-1, x_test.shape[0]) # init all predictions to -1 (indeterminate)
+
+		if allow_indeterminates == True:
+			y_pred[np.where(y_prob >= self.kd_threshold)] = 1 # KD predictions (where score >= KD threshold)
+			y_pred[np.where(y_prob <= self.fc_threshold)] = 0 # FC predictions (where score <= FC threshold)
+		else:
+			y_pred[np.where(y_prob >= 0.5)] = 1 # KD predictions (where score >= KD threshold)
+			y_pred[np.where(y_prob <= 0.5)] = 0 # FC predictions (where score <= FC threshold)
+
 		return y_pred
 
 	# Train on x_train and y_train, and predict on x_test
@@ -414,7 +449,7 @@ class TwoStageModel:
 	# Predict on x_test, return probability that each patient is KD
 	def predict_proba(self, x_test):
 		if self.calibrated == False:
-			print('WARNING: called predict_proba on Stanford model without pre-calibrating!')
+			print('WARNING: called predict_proba on 2-stage model without pre-calibrating!')
 
 		### Test ###
 		stage1_test_proba = self.stage1.predict_proba(x_test)[:, 1]
@@ -439,7 +474,38 @@ class TwoStageModel:
 		y_pred = apply_threshold(y_prob, threshold)
 		return y_pred
 
+	# TODO: Return numpy array: 1 for KD, 0 for FC, -1 for indeterminate
+	def predict_calibrated(self, x_test, allow_indeterminates=True):
+		if self.calibrated == False:
+			print('WARNING: called predict_indeterminates() on 2-stage model without pre-calibrating!')
+
+		# KD scores for each stage, between 0-1
+		stage1_y_prob = self.stage1.predict_proba(x_test)[:, 1] 
+		stage2_y_prob = self.stage2.predict_proba(x_test)[:, 1]
+
+		# Init all final predictions to -1 (indeterminate)
+		y_pred = np.repeat(-1, x_test.shape[0]) 
+
+		# Stage 1
+		y_pred[np.where(stage1_y_prob >= self.stage1_kd_threshold)] = 1 # KD predictions (where score >= KD threshold)
+		y_pred[np.where(stage1_y_prob <= self.stage1_fc_threshold)] = 0 # FC predictions (where score <= FC threshold)
+		stage1_indeterminate_inds = np.where(y_pred == -1)
+
+		# Stage 2
+		stage2_pred = np.repeat(-1, x_test.shape[0])
+		if allow_indeterminates == True:
+			stage2_pred[np.where(stage2_y_prob >= self.stage2_kd_threshold)] = 1 # KD predictions (where score >= KD threshold)
+			stage2_pred[np.where(stage2_y_prob <= self.stage2_fc_threshold)] = 0 # FC predictions (where score <= FC threshold)
+		else:
+			stage2_pred[np.where(stage2_y_prob >= 0.5)] = 1 # KD predictions (where score >= KD threshold)
+			stage2_pred[np.where(stage2_y_prob < 0.5)] = 0 # FC predictions (where score <= FC threshold)
+
+		y_pred[stage1_indeterminate_inds] = stage2_pred[stage1_indeterminate_inds] # Apply stage 2 predictions to stage1-indeterminates
+
+		return y_pred
+
 	# Train on x_train and y_train, and predict on x_test
 	def train_test(self, x_train, x_test, y_train, y_test, threshold=0.5):
 		self.train_calibrate(x_train, y_train)
 		return self.predict(x_test, threshold=threshold)
+
