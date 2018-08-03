@@ -43,7 +43,7 @@ warnings.filterwarnings(module='sklearn*', action='ignore', category=Deprecation
 BETA = 1.5 # 0-1 favors precision, >1 (up to infinity) favors recall
 CLASS_WEIGHT = "none" # set to "none" or "balanced"
 USE_SMOTE = False
-RANDOM_STATES = [90007, 0, 2018, 525, 7, 10, 777, 16, 99, 2048, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+RANDOM_STATES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 90007, 2018, 525, 777, 16, 99, 2048, 1880, 42]
 N_JOBS = 1
 ALLOW_INDETERMINATES = True
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)

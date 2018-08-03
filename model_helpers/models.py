@@ -158,7 +158,7 @@ def test_model(model, x, y,
 		y_prob = model.predict_proba(x_test)
 
 		if verbose == True:
-			print('FC-KD Thresholds: {}, {}'.format(model.fc_threhsold, model.kd_threshold))
+			print('FC-KD Thresholds: {}, {}'.format(model.fc_threshold, model.kd_threshold))
 
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
