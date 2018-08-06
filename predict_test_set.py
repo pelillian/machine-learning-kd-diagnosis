@@ -25,6 +25,7 @@ from sklearn.svm import SVC
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import BaggingClassifier, RandomForestClassifier, VotingClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import xgboost as xgb
 
 # from deepnet.deep_model import DeepKDModel
@@ -271,8 +272,8 @@ with open('./data/test_predictions/test_preds.csv', 'w') as f:
 	lda_voting.train_calibrate(x_train, y_train)
 
 	# Final predictions
-	lda_voting_preds_no_indeterminates = voting.predict_calibrated(x_test, allow_indeterminates=False)
-	lda_voting_preds_with_indeterminates = voting.predict_calibrated(x_test, allow_indeterminates=True)
+	lda_voting_preds_no_indeterminates = lda_voting.predict_calibrated(x_test, allow_indeterminates=False)
+	lda_voting_preds_with_indeterminates = lda_voting.predict_calibrated(x_test, allow_indeterminates=True)
 
 
 

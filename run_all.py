@@ -154,26 +154,34 @@ for random_state in RANDOM_STATES:
 	print()
 
 
-	# ### Random Forest ###
-	# rf_params = {
-	#    'n_estimators': randint(50, 500),
-	#    'max_features': randint(3, 10),
-	#    'min_samples_split': randint(2, 50),
-	#    'min_samples_leaf': randint(1, 40)
-	# }
-	# if (CLASS_WEIGHT != "none"):
-	# 	rf_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
-	# print("Random Forest")
-	# test_model(ScikitModel(RandomForestClassifier(), 
-	# 				params=rf_params,
-	# 				random_search=True,
-	# 				n_iter=25,
-	# 				scoring='roc_auc',
-	# 				verbose=True),
-	# 		x, y,
-	# 		allow_indeterminates=ALLOW_INDETERMINATES
-	# )
-	# print()
+	### Random Forest ###
+	rf_params = {
+	   'n_estimators': [300],
+	   'max_features': [1/3]
+	}
+	print("RANDOM FOREST")
+	avg_rocauc, confusions = test_model(ScikitModel(RandomForestClassifier(), 
+						params=rf_params,
+						random_search=False,
+						n_iter=1,
+						scoring='roc_auc',
+						verbose=True),
+					x, y,
+					allow_indeterminates=ALLOW_INDETERMINATES,
+					random_state=random_state,
+					calibration_set_size=CALIBRATION_SET_SIZE,
+					return_val='roc_confusion',
+					verbose=VERBOSE)
+
+	if 'rf' not in rocaucs_dict:
+		rocaucs_dict['rf'] = []
+	rocaucs_dict['rf'].append(avg_rocauc)
+
+	if 'rf' not in confusions_dict:
+		confusions_dict['rf'] = []
+	confusions_dict['rf'].append(confusions)
+
+	print()
 
 
 	#### XGBoost ###
@@ -307,55 +315,55 @@ for random_state in RANDOM_STATES:
 
 
 	### Voting Ensemble (OPTIMIZE FOR ACCURACY) ###
-	clf1 = SVC(probability=True)
-	clf2 = LogisticRegression()
-	clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
+	# clf1 = SVC(probability=True)
+	# clf2 = LogisticRegression()
+	# clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
 
-	eclf = VotingClassifier(
-	    estimators=[
-	    	('svm', clf1), 
-	    	('lr', clf2),
-	    	('xgb', clf3)
-	    ],
-	    voting='soft',
-	    n_jobs=N_JOBS
-	)
-	eclf_params = {
-	    'svm__C': np.logspace(-3, 2, 100),
-		'svm__gamma': np.logspace(-3, 2, 100),
-		'svm__kernel': ['rbf', 'poly'],
-	    'lr__C': np.logspace(-3, 2, 100),
-		'xgb__n_estimators': randint(50, 500),
-		'xgb__max_depth': randint(3, 10),
-		'xgb__learning_rate': np.logspace(-2, 0, 100),
-		'xgb__min_child_weight': randint(1, 5),
-		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
-		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
-	}
-	print("LR-SVC-XGB VOTING ENSEMBLE (ACCURACY)")
-	avg_rocauc, confusions = test_model(ScikitModel(
-					eclf,
-					eclf_params,
-					random_search=True, 
-					scoring='accuracy',
-					n_iter=25,
-					verbose=True),
-				x, y,
-				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state,
-				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion',
-				verbose=VERBOSE)
+	# eclf = VotingClassifier(
+	#     estimators=[
+	#     	('svm', clf1), 
+	#     	('lr', clf2),
+	#     	('xgb', clf3)
+	#     ],
+	#     voting='soft',
+	#     n_jobs=N_JOBS
+	# )
+	# eclf_params = {
+	#     'svm__C': np.logspace(-3, 2, 100),
+	# 	'svm__gamma': np.logspace(-3, 2, 100),
+	# 	'svm__kernel': ['rbf', 'poly'],
+	#     'lr__C': np.logspace(-3, 2, 100),
+	# 	'xgb__n_estimators': randint(50, 500),
+	# 	'xgb__max_depth': randint(3, 10),
+	# 	'xgb__learning_rate': np.logspace(-2, 0, 100),
+	# 	'xgb__min_child_weight': randint(1, 5),
+	# 	'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+	# 	'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	# }
+	# print("LR-SVC-XGB VOTING ENSEMBLE (ACCURACY)")
+	# avg_rocauc, confusions = test_model(ScikitModel(
+	# 				eclf,
+	# 				eclf_params,
+	# 				random_search=True, 
+	# 				scoring='accuracy',
+	# 				n_iter=25,
+	# 				verbose=True),
+	# 			x, y,
+	# 			allow_indeterminates=ALLOW_INDETERMINATES,
+	# 			random_state=random_state,
+	# 			calibration_set_size=CALIBRATION_SET_SIZE,
+	# 			return_val='roc_confusion',
+	# 			verbose=VERBOSE)
 
-	if 'voting_clf_accuracy' not in rocaucs_dict:
-		rocaucs_dict['voting_clf_accuracy'] = []
-	rocaucs_dict['voting_clf_accuracy'].append(avg_rocauc)
+	# if 'voting_clf_accuracy' not in rocaucs_dict:
+	# 	rocaucs_dict['voting_clf_accuracy'] = []
+	# rocaucs_dict['voting_clf_accuracy'].append(avg_rocauc)
 
-	if 'voting_clf_accuracy' not in confusions_dict:
-		confusions_dict['voting_clf_accuracy'] = []
-	confusions_dict['voting_clf_accuracy'].append(confusions)
+	# if 'voting_clf_accuracy' not in confusions_dict:
+	# 	confusions_dict['voting_clf_accuracy'] = []
+	# confusions_dict['voting_clf_accuracy'].append(confusions)
 
-	print()
+	# print()
 
 
 	### Voting Ensemble (OPTIMIZE FOR ROCAUC) ###
@@ -412,56 +420,56 @@ for random_state in RANDOM_STATES:
 
 	### LDA --> VOTING-ENSEMBLE 2-STAGE MODEL (OPTIMIZE FOR ACCURACY) ###
 	# Stage 1: LDA
-	stage1 = LinearDiscriminantAnalysis()
+	# stage1 = LinearDiscriminantAnalysis()
 	
-	# Stage 2: LR-SVC-XGB Voting Classifier
-	clf1 = SVC(probability=True)
-	clf2 = LogisticRegression()
-	clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
-	eclf = VotingClassifier(
-	    estimators=[
-	    	('svm', clf1), 
-	    	('lr', clf2),
-	    	('xgb', clf3)
-	    ],
-	    voting='soft',
-	    n_jobs=N_JOBS
-	)
-	eclf_params = {
-	    'svm__C': np.logspace(-3, 2, 100),
-		'svm__gamma': np.logspace(-3, 2, 100),
-		'svm__kernel': ['rbf', 'poly'],
-	    'lr__C': np.logspace(-3, 2, 100),
-		'xgb__n_estimators': randint(50, 500),
-		'xgb__max_depth': randint(3, 10),
-		'xgb__learning_rate': np.logspace(-2, 0, 100),
-		'xgb__min_child_weight': randint(1, 5),
-		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
-		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
-	}
-	stage2 = RandomizedSearchCV(eclf, eclf_params, cv=5, n_iter=25, scoring='accuracy', verbose=1, n_jobs=1)
+	# # Stage 2: LR-SVC-XGB Voting Classifier
+	# clf1 = SVC(probability=True)
+	# clf2 = LogisticRegression()
+	# clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
+	# eclf = VotingClassifier(
+	#     estimators=[
+	#     	('svm', clf1), 
+	#     	('lr', clf2),
+	#     	('xgb', clf3)
+	#     ],
+	#     voting='soft',
+	#     n_jobs=N_JOBS
+	# )
+	# eclf_params = {
+	#     'svm__C': np.logspace(-3, 2, 100),
+	# 	'svm__gamma': np.logspace(-3, 2, 100),
+	# 	'svm__kernel': ['rbf', 'poly'],
+	#     'lr__C': np.logspace(-3, 2, 100),
+	# 	'xgb__n_estimators': randint(50, 500),
+	# 	'xgb__max_depth': randint(3, 10),
+	# 	'xgb__learning_rate': np.logspace(-2, 0, 100),
+	# 	'xgb__min_child_weight': randint(1, 5),
+	# 	'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
+	# 	'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
+	# }
+	# stage2 = RandomizedSearchCV(eclf, eclf_params, cv=5, n_iter=25, scoring='accuracy', verbose=1, n_jobs=1)
 
-	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ACCURACY)')
+	# print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ACCURACY)')
 
-	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-					stage1, stage2,
-					verbose=True),
-				x, y,
-				allow_indeterminates=ALLOW_INDETERMINATES,
-				random_state=random_state,
-				calibration_set_size=CALIBRATION_SET_SIZE,
-				return_val='roc_confusion',
-				verbose=VERBOSE)
+	# avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+	# 				stage1, stage2,
+	# 				verbose=True),
+	# 			x, y,
+	# 			allow_indeterminates=ALLOW_INDETERMINATES,
+	# 			random_state=random_state,
+	# 			calibration_set_size=CALIBRATION_SET_SIZE,
+	# 			return_val='roc_confusion',
+	# 			verbose=VERBOSE)
 
-	if 'lda_voting_2stage_accuracy' not in rocaucs_dict:
-		rocaucs_dict['lda_voting_2stage_accuracy'] = []
-	rocaucs_dict['lda_voting_2stage_accuracy'].append(avg_rocauc)
+	# if 'lda_voting_2stage_accuracy' not in rocaucs_dict:
+	# 	rocaucs_dict['lda_voting_2stage_accuracy'] = []
+	# rocaucs_dict['lda_voting_2stage_accuracy'].append(avg_rocauc)
 
-	if 'lda_voting_2stage_accuracy' not in confusions_dict:
-		confusions_dict['lda_voting_2stage_accuracy'] = []
-	confusions_dict['lda_voting_2stage_accuracy'].append(confusions)
+	# if 'lda_voting_2stage_accuracy' not in confusions_dict:
+	# 	confusions_dict['lda_voting_2stage_accuracy'] = []
+	# confusions_dict['lda_voting_2stage_accuracy'].append(confusions)
 
-	print()
+	# print()
 
 
 	### LDA --> VOTING-ENSEMBLE 2-STAGE MODEL (0PTIMIZE FOR ROCAUC) ###
