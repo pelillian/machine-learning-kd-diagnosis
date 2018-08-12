@@ -9,6 +9,7 @@
 # -------------------------------------------------------------------------------------------------
 
 import pickle as pkl
+import pandas as pd
 import numpy as np
 import numpy.ma as ma # masked array
 
@@ -57,17 +58,28 @@ def fill_nan(data, mode='mean', k=5):
 
 	# Mean imputation
 	if mode == 'mean':
-		data = np.where(np.isnan(data), ma.array(data, mask=np.isnan(data)).mean(axis=0), data)
+		# Pandas DataFrame
+		if isinstance(data, pd.DataFrame):
+			data = data.fillna(data.mean())
+		# Numpy array
+		else:
+			data = np.where(np.isnan(data), ma.array(data, mask=np.isnan(data)).mean(axis=0), data)
 	
 	# KNN imputation
 		# Documentation: https://github.com/iskandr/fancyimpute/blob/master/fancyimpute/knn.py
 		# Assumes inputs are already standardized
 	elif mode == 'knn':
-
 		from fancyimpute import KNN
-		
-		if np.isnan(data).any().any(): # If has NaN entries, then impute
-			data = KNN(k=k).complete(data)
+
+		# If has NaN entries, then impute
+		if np.isnan(data).any().any():
+			# Pandas DataFrame: get filled matrix, then create new DF
+			if isinstance(data, pd.DataFrame):
+				filled_array = KNN(k=k).complete(data.values)
+				data = pd.DataFrame(data=filled_array, index=data.index, columns=data.columns)
+			# Numpy array
+			else:
+				data = KNN(k=k).complete(data)
 
 	return data
 
@@ -77,7 +89,7 @@ def fill_nan(data, mode='mean', k=5):
 	# one_hot: True = labels are one-hot vectors ([Not KD, KD]), False = labels are values (1 = KD)
 	# fill_mode: how to fill NaN values (see fill_nan())
 	# k: how many nearest neighbors to look at for KNN-based imputation
-def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True):
+def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True, return_pandas=False):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset.pkl','rb')
@@ -116,13 +128,19 @@ def load(one_hot=False, fill_mode='mean', standardize=True, k=5, return_ids=True
 	# Return preprocessed (x_train, x_test, y_train, y_test)
 	preprocessed_data = fill_nan(x_train, mode=fill_mode, k=k), fill_nan(x_test, mode=fill_mode, k=k), \
 		fill_nan(y_train, mode=fill_mode, k=k), fill_nan(y_test, mode=fill_mode, k=k)
+
+	if return_pandas == False:
+		# Convert each element to numpy array
+		for i in range(len(preprocessed_data)):
+			preprocessed_data[i] = np.array(preprocessed_data[i])
+
 	return preprocessed_data
 
 
 # Load expanded dataset from pickle dump
 # Returns: x_all, y_all, ids_all (numpy arrays)
 def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
-	return_ids=True, reduced_features=False):
+	return_ids=True, reduced_features=False, return_pandas=False):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset_expanded.pkl','rb')
@@ -156,16 +174,18 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
 	# Fill NaNs
 	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
 
-	# Convert to numpy.ndarray
-	y_array = y_all.values
-	ids_array = ids_all.values
+	if return_pandas == False:
+		# Convert to numpy.ndarray
+		x_filled = x_filled.values
+		y_all = y_all.values
+		ids_all = ids_all.values
 
-	return (x_filled, y_array, ids_array)
+	return (x_filled, y_all, ids_all)
 
 # Load test dataset from pickle dump (18 features)
 # Returns: x_all, ids_all (numpy arrays)
 def load_test(fill_mode='mean', standardize=True, k=5, \
-	return_ids=True):
+	return_ids=True, return_pandas=False):
 	# Load pickle dump
 	try:
 		f = open('../data/kd_dataset_test.pkl','rb')
@@ -187,7 +207,9 @@ def load_test(fill_mode='mean', standardize=True, k=5, \
 	# Fill NaNs
 	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
 
-	# Convert to numpy.ndarray
-	ids_array = ids_all.values
+	if return_pandas == False:
+		# Convert to numpy.ndarray
+		x_filled = x_filled.values
+		ids_all = ids_all.values
 
-	return (x_filled, ids_array)
+	return (x_filled, ids_all)
