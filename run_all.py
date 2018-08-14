@@ -51,7 +51,7 @@ REDUCED_FEATURES = True
 VERBOSE = True
 
 # Load expanded dataset
-x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=REDUCED_FEATURES)
+x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=REDUCED_FEATURES, return_pandas=True)
 
 rocaucs_dict = {}
 confusions_dict = {}

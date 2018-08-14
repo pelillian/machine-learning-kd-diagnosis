@@ -3,6 +3,7 @@
 
 # Imports
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
 from sklearn.metrics import make_scorer, fbeta_score, confusion_matrix, roc_curve, auc
@@ -144,7 +145,11 @@ def test_model(model, x, y,
 	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
-		x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		if isinstance(x, pd.DataFrame):
+			x_train_all, x_test, y_train_all, y_test = x.iloc[train_idx], x.iloc[test_idx], y.iloc[train_idx], y.iloc[test_idx]
+		else:
+			x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+
 		# Separate risk-calibration set
 		# x_train, x_calibrate, y_train, y_calibrate = train_test_split(x_train_all, y_train_all, 
 		# 	test_size=calibration_set_size, random_state=random_state, stratify=y_train_all)
@@ -214,7 +219,10 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
 	for train_idx, test_idx in kf.split(x, y):
 		# Unpack CV split
-		x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
+		if isinstance(x, pd.DataFrame):
+			x_train_all, x_test, y_train_all, y_test = x.iloc[train_idx], x.iloc[test_idx], y.iloc[train_idx], y.iloc[test_idx]
+		else:
+			x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
 		
 		### --- ROC EVALUATION --- ###
 		# Pestage2orm model-training and risk-calibration
