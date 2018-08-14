@@ -553,3 +553,46 @@ class TwoStageModel:
 		self.train_calibrate(x_train, y_train)
 		return self.predict_calibrated(x_test)
 
+# Subcohorted model wrapper class
+	# Train and calibrate 4 separate models, splitting patients into subcohorts by # clinical KD criteria
+class SubcohortModel:
+	def __init__(self, base_model, verbose=True): # had to hardcode thresholds because they overlapped
+		self.subcohort1_model = base_model # 1 clinical criterion
+		self.subcohort2_model = base_model # 2
+		self.subcohort3_model = base_model # 3
+		self.subcohort4_model = base_model # >= 4
+		self.verbose = verbose
+		self.calibrated = False
+
+	# Train & Calibrate model (split train-set into cohorts, train and calibrate each  of the 4 models)
+		# Store thresholds in self.subcohort{1/2/3/4}_{kd/fc}_threshold
+		# If refit=True, refit models on entire subcohort for inference
+	def train_calibrate(self, x_train, y_train, calibration_set_size=0.5, random_state=90007, refit=False):
+		# TODO
+		return
+
+	# Train only (fit 4 models) -- don't calibrate
+	def train(self, x_train, y_train):
+		# TODO
+		return
+
+	# Predict on x_test, return probability that each patient is KD
+	def predict_proba(self, x_test):
+		# TODO
+		return
+
+	# Predict on x_test, return binary y_pred
+	def predict(self, x_test, threshold=0.5):
+		# TODO
+		return
+
+	# Return numpy array with calibrated predictions: 1 for KD, 0 for FC, -1 for indeterminate
+	def predict_calibrated(self, x_test, allow_indeterminates=True, return_stage1=False):
+		# TODO
+		return
+
+	# Train-calibrate on x_train and y_train, and predict on x_test
+	def train_test(self, x_train, x_test, y_train, y_test):
+		# TODO
+		return
+
