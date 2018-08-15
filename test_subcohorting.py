@@ -70,9 +70,9 @@ for random_state in RANDOM_STATES:
 	print("(with Subcohorting)")
 	stage1 = LinearDiscriminantAnalysis()
 	stage2 = RandomForestClassifier(n_estimators=300, max_features=1/3)
-	avg_rocauc, confusions = test_2stage_model(SubcohortModel(TwoStageModel(
-					stage1, stage2,
-					verbose=True)),
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, SubcohortModel(stage2),
+					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
@@ -210,9 +210,9 @@ for random_state in RANDOM_STATES:
 
 	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ROCAUC)')
 
-	avg_rocauc, confusions = test_2stage_model(SubcohortModel(TwoStageModel(
-					stage1, stage2,
-					verbose=True)),
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, SubcohortModel(stage2),
+					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
 				random_state=random_state,
