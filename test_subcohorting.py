@@ -68,8 +68,12 @@ for random_state in RANDOM_STATES:
 	### Subcohorting Stanford Algorithm ###
 	print("STANFORD KD ALGORITHM")
 	print("(with Subcohorting)")
-	stage1 = LinearDiscriminantAnalysis()
-	stage2 = RandomForestClassifier(n_estimators=300, max_features=1/3)
+	stage1 = ScikitModel(LinearDiscriminantAnalysis(), params={}, random_search=False, n_iter=1)
+	rf_params = {
+	   'n_estimators': [300],
+	   'max_features': [1/3]
+	}
+	stage2 = SubcohortModel(base_model=ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1))
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, SubcohortModel(stage2),
 					verbose=True),
@@ -179,7 +183,7 @@ for random_state in RANDOM_STATES:
 
 	### LDA --> VOTING-ENSEMBLE 2-STAGE MODEL (0PTIMIZE FOR ROCAUC) ###
 	# Stage 1: LDA
-	stage1 = LinearDiscriminantAnalysis()
+	stage1 = ScikitModel(LinearDiscriminantAnalysis(), params={}, random_search=False, n_iter=1)
 	
 	# Stage 2: LR-SVC-XGB Voting Classifier
 	clf1 = SVC(probability=True)
@@ -206,12 +210,12 @@ for random_state in RANDOM_STATES:
 		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
-	stage2 = RandomizedSearchCV(eclf, eclf_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1, n_jobs=1)
+	stage2 = SubcohortModel(base_model=ScikitModel(eclf, eclf_params, random_search=True, scoring='roc_auc', n_iter=25, verbose=True))
 
 	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ROCAUC)')
 
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-					stage1, SubcohortModel(stage2),
+					stage1, stage2,
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,

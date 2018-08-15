@@ -373,7 +373,7 @@ def plot_cv_roc_curves(roc_curves):
 	
 # ScikitModel wrapper class
 class ScikitModel:
-	def __init__(self, skmodel, params, random_search=False, n_iter=10, scoring='roc_auc', beta=1.0, n_jobs=1, verbose=False):
+	def __init__(self, skmodel, params={}, random_search=False, n_iter=1, scoring='roc_auc', beta=1.0, n_jobs=1, verbose=False):
 		self.skmodel = skmodel
 		self.cv_scorer = 'roc_auc' if scoring=='roc_auc' else make_scorer(fbeta_score, beta=beta)
 		self.verbose = verbose
@@ -554,12 +554,12 @@ class SubcohortModel:
 			x['num_kd_criteria'] += (x[subcohorting_feature] > 0).astype(int) # add 1 if feature > 0
 
 		# Get subcohorts based on num. clinical KD criteria
-		subcohort1_indices = x.index[x['num_kd_criteria'] == 1]
-		subcohort2_indices = x.index[x['num_kd_criteria'] == 2]
-		subcohort3_indices = x.index[x['num_kd_criteria'] == 3]
-		subcohort4_indices = x.index[x['num_kd_criteria'] >= 4]
+		subcohort1_indices = x.index[x['num_kd_criteria'] == 1].tolist()
+		subcohort2_indices = x.index[x['num_kd_criteria'] == 2].tolist()
+		subcohort3_indices = x.index[x['num_kd_criteria'] == 3].tolist()
+		subcohort4_indices = x.index[x['num_kd_criteria'] >= 4].tolist()
 
-		x.drop('num_kd_criteria', inplace=True)
+		x.drop('num_kd_criteria', inplace=True, axis=1)
 
 		return subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices
 
@@ -567,7 +567,11 @@ class SubcohortModel:
 	def get_subcohorts(self, x, y=None):
 		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x)
 
+		# print(subcohort1_indices) - TODO: debugging
+
 		# Get subcohorts based on num. clinical KD criteria
+		# print('x shape: ', x.shape)
+
 		subcohort1_x = x.iloc[subcohort1_indices]
 		subcohort2_x = x.iloc[subcohort2_indices]
 		subcohort3_x = x.iloc[subcohort3_indices]
