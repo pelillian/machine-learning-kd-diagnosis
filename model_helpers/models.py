@@ -151,15 +151,7 @@ def test_model(model, x, y,
 		else:
 			x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
 
-		# Separate risk-calibration set
-		# x_train, x_calibrate, y_train, y_calibrate = train_test_split(x_train_all, y_train_all, 
-		# 	test_size=calibration_set_size, random_state=random_state, stratify=y_train_all)
-
 		### ROC EVALUATION ###
-		# Train on non-calibration train set
-		# best_score = model.train(x_train, y_train)
-		# best_scores.append(best_score)
-
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
 
@@ -174,19 +166,6 @@ def test_model(model, x, y,
 		### CONFUSION/THRESHOLDING EVALUATION ###
 		final_preds = model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates) # 1 for KD, 0 for FC, -1 for Indeterminate
 		stats_arr.append(compute_calibrated_confusion(final_preds, y_test))
-
-		# final_fc_binary = np.array(final_preds == 0).astype(np.int32)
-		# final_kd_binary = np.array(final_preds == 1).astype(np.int32)
-		# final_indeterminate_binary = np.array(final_preds == -1).astype(np.int32)
-
-		# # Confusion info
-		# if allow_indeterminates == False:
-		# 	stats_arr.append(compute_confusion(y_pred, y_test)) # confusion matrix with 1 set threshold
-		# else:
-		# 	y_calibrate_prob = model.predict_proba(x_calibrate)
-		# 	y_test_prob = model.predict_proba(x_test)
-		# 	fc_kd_thresholds = get_fc_kd_thresholds(y_calibrate_prob, y_calibrate) # risk calibration
-		# 	stats_arr.append(compute_indeterminate_confusion(y_test_prob, y_test, fc_kd_thresholds)) # confusion matrix with indeterminates
 
 	print('CV Confusion: ', stats_arr)
 	# print('Best CV scores: ', np.around(best_scores, decimals=4))
@@ -226,7 +205,7 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 			x_train_all, x_test, y_train_all, y_test = x[train_idx], x[test_idx], y[train_idx], y[test_idx]
 		
 		### --- ROC EVALUATION --- ###
-		# Pestage2orm model-training and risk-calibration
+		# Perform model-training and risk-calibration
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
 
@@ -247,69 +226,10 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 
 		stats_arr.append(compute_calibrated_confusion(final_preds, y_test))
 
-		# stage1_y_prob = model.stage1.predict_proba(x_test)[:, 1]
-		# stage2_y_prob = model.stage2.predict_proba(x_test)[:, 1]
-		# y_prob = model.predict_proba(x_test)
-
-		# # Get thresholds from prior calibration
-		# stage1_fc_threshold, stage1_kd_threshold = model.stage1_fc_threshold, model.stage1_kd_threshold
-		# stage2_fc_threshold, stage2_kd_threshold = model.stage2_fc_threshold, model.stage2_kd_threshold
-
-		# # Stage 1 predictions
-		# stage1_fc_binary = np.array(stage1_y_prob <= stage1_fc_threshold).astype(np.int32) # where stage1_y_prob <= stage1_fc_threshold
-		# stage1_kd_binary = np.array(stage1_y_prob >= stage1_kd_threshold).astype(np.int32) # where stage1_y_prob >= stage1_kd_threshold
-		# stage1_indeterminate_binary = np.array(np.logical_and(stage1_y_prob > stage1_fc_threshold, stage1_y_prob < stage1_kd_threshold)).astype(np.int32)
-		# stage1_indeterminate_inds = np.argwhere(stage1_indeterminate_binary == 1)
-
-		# # Record how many patients are KD/FC/indeterminate after stage 1
+		# Record how many patients are KD/FC/indeterminate after stage 1
 		num_stage1_kd.append(np.count_nonzero(stage1_preds == 1))
 		num_stage1_fc.append(np.count_nonzero(stage1_preds == 0))
 		num_stage1_indeterminate.append(np.count_nonzero(stage1_preds == -1))
-
-		# # Prep for Stage 2
-		# final_fc_binary = np.copy(stage1_fc_binary)
-		# final_kd_binary = np.copy(stage1_kd_binary)
-		# final_indeterminate_binary = np.copy(stage1_indeterminate_binary)
-
-		# Allow indeterminates in final stage: perform PPV/NPV thresholding
-		# if allow_indeterminates == True:
-			# # Stage 2 predictions
-			# stage2_fc_binary = np.array(stage2_y_prob <= stage2_fc_threshold).astype(np.int32) # where stage2_y_prob <= stage2_fc_threshold
-			# stage2_kd_binary = np.array(stage2_y_prob >= stage2_kd_threshold).astype(np.int32) # where stage2_y_prob <= stage2_fc_threshold
-			# stage2_non_indeterminate = np.array(np.logical_or(stage2_fc_binary, stage2_kd_binary)) # where a prediction was made by stage2 (non-indeterminate)
-
-			# # Apply stage2 predictions
-			# final_fc_binary[stage1_indeterminate_inds] = stage2_fc_binary[stage1_indeterminate_inds] # apply stage2 FC predictions to indeterminates
-			# final_kd_binary[stage1_indeterminate_inds] = stage2_kd_binary[stage1_indeterminate_inds] # apply stage2 KD predictions to indeterminates
-			# final_indeterminate_binary[stage1_indeterminate_inds] = stage2_non_indeterminate[stage1_indeterminate_inds] # update indeterminate entries
-
-			# Get TP, TN, FP, FN, Indeterminates
-			# true_negatives = np.sum(final_fc_binary * (1 - y_test)) # fc_binary = 1 and y_test = 0
-			# false_positives = np.sum(final_kd_binary * (1 - y_test)) # kd_binary = 1 and y_test = 0
-			# false_negatives = np.sum(final_fc_binary * y_test) # fc_binary = 1 and y_test = 1
-			# true_positives = np.sum(final_kd_binary * y_test) # kd_binary = 1 and y_test = 1
-			# fc_indeterminate = np.sum(final_indeterminate_binary * (1 - y_test)) # indeterminate_binary = 1 and y_test = 0
-			# kd_indeterminate = np.sum(final_indeterminate_binary * y_test) # indeterminate_binary = 1 and y_test = 1
-
-			# stats_arr.append((true_negatives, false_positives, false_negatives, true_positives, fc_indeterminate, kd_indeterminate))
-
-		# No indeterminates in final stage: threshold at 0.5 (or manually pass in "final_threshold")
-		# else:
-			# # Stage 2 predictions
-			# stage2_fc_binary = np.array(stage2_y_prob <= final_threshold).astype(np.int32) # where stage2_y_prob <= final_threshold
-			# stage2_kd_binary = np.array(stage2_y_prob > final_threshold).astype(np.int32) # where stage2_y_prob < final_threshold
-
-			# # Apply stage2 predictions
-			# final_fc_binary[stage1_indeterminate_inds] = stage2_fc_binary[stage1_indeterminate_inds] # apply stage2 FC predictions to indeterminates
-			# final_kd_binary[stage1_indeterminate_inds] = stage2_kd_binary[stage1_indeterminate_inds] # apply stage2 KD predictions to indeterminates
-
-			# Get TP, TN, FP, FN, Indeterminates
-			# true_negatives = np.sum(final_fc_binary * (1 - y_test)) # fc_binary = 1 and y_test = 0
-			# false_positives = np.sum(final_kd_binary * (1 - y_test)) # kd_binary = 1 and y_test = 0
-			# false_negatives = np.sum(final_fc_binary * y_test) # fc_binary = 1 and y_test = 1
-			# true_positives = np.sum(final_kd_binary * y_test) # kd_binary = 1 and y_test = 1
-
-			# stats_arr.append((true_negatives, false_positives, false_negatives, true_positives))
 		
 	print('Total Stage-1 KD/FC/Indeterminate: {}/{}/{}'.format(np.sum(num_stage1_kd), np.sum(num_stage1_fc), np.sum(num_stage1_indeterminate)))
 	print('CV Confusion: ', stats_arr)
@@ -549,6 +469,8 @@ class SubcohortModel:
 
 	# Take in a DataFrame of patients, return indices of 4 subcohorts
 	def get_subcohort_indices(self, x):
+		pd.options.mode.chained_assignment = None  # default='warn'
+
 		x['num_kd_criteria'] = 0 # new column: # KD criteria
 		for subcohorting_feature in self.subcohorting_features:
 			x['num_kd_criteria'] += (x[subcohorting_feature] > 0).astype(int) # add 1 if feature > 0

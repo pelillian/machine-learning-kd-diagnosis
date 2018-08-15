@@ -73,9 +73,9 @@ for random_state in RANDOM_STATES:
 	   'n_estimators': [300],
 	   'max_features': [1/3]
 	}
-	stage2 = SubcohortModel(base_model=ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1))
+	stage2 = SubcohortModel(ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1, scoring='roc_auc'))
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
-					stage1, SubcohortModel(stage2),
+					stage1, stage2,
 					verbose=True),
 				x, y,
 				allow_indeterminates=ALLOW_INDETERMINATES,
@@ -210,7 +210,7 @@ for random_state in RANDOM_STATES:
 		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
-	stage2 = SubcohortModel(base_model=ScikitModel(eclf, eclf_params, random_search=True, scoring='roc_auc', n_iter=25, verbose=True))
+	stage2 = SubcohortModel(ScikitModel(eclf, eclf_params, random_search=True, scoring='roc_auc', n_iter=25, verbose=True))
 
 	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ROCAUC)')
 
