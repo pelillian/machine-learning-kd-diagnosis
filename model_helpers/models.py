@@ -558,14 +558,22 @@ class TwoStageModel:
 	# Train and calibrate 4 separate models, splitting patients into subcohorts by # clinical KD criteria
 	# Base model must be of type ScikitModel!
 class SubcohortModel:
-	def __init__(self, base_model, verbose=True):
+	def __init__(self, base_model, verbose='base_model'):
 		self.subcohort1_model = deepcopy(base_model) # 1 clinical criterion
 		self.subcohort2_model = deepcopy(base_model) # 2
 		self.subcohort3_model = deepcopy(base_model) # 3
 		self.subcohort4_model = deepcopy(base_model) # >= 4
 		self.subcohorting_features = ['redhands', 'rash', 'redeyes', 'redplt', 'clnode']
-		self.verbose = verbose
+
+		if verbose == 'base_model':
+			self.verbose = base_model.verbose
+		else:
+			self.verbose = verbose
+		
 		self.calibrated = False
+
+		self.stage1_fc_threshold = ''
+		self.stage2_fc_threshold = ''
 
 	# Take in a DataFrame of patients, return indices of 4 subcohorts
 	def get_subcohort_indices(self, x):
@@ -605,22 +613,6 @@ class SubcohortModel:
 		else:
 			return (subcohort1_x, subcohort2_x, subcohort3_x, subcohort4_x)
 
-	# # Train-calibrate a single subcohort model, return calibrated thresholds
-	# def train_calibrate_subcohort_model(self, subcohort_model, x_train, y_train, calibration_set_size, random_state=90007, refit=False):
-	# 	# Split train and calibrate sets
-	# 	x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train, y_train, 
-	# 		test_size=calibration_set_size, random_state=random_state, stratify=y_train)
-
-	# 	# Fit and calibrate
-	# 	subcohort_model.fit(x_train_calibrate, y_train_calibrate)
-	# 	subcohort_model_calibrate_proba = self.subcohort_model.predict_proba(x_calibrate)[:, 1]
-
-	# 	if refit == True:
-	# 		subcohort_model.fit(x_train, y_train)
-
-	# 	return get_fc_kd_thresholds(subcohort_model_calibrate_proba, y_calibrate)
-
-
 	# Train & Calibrate model (split train-set into cohorts, train and calibrate each  of the 4 models)
 		# Store thresholds in self.subcohort{1/2/3/4}_{kd/fc}_threshold
 		# If refit=True, refit models on entire subcohort for inference
@@ -628,36 +620,33 @@ class SubcohortModel:
 		# Get subcohorts
 		subcohort1_x, subcohort1_y, subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y = self.get_subcohorts(x_train, y_train)
 
-		# # Split train and calibrate sets
-		# self.subcohort1_fc_threshold, self.subcohort1_kd_threshold = train_calibrate_subcohort_model(self.subcohort1_model, subcohort1_x, subcohort1_x, calibration_set_size, random_state, refit)
-		# self.subcohort2_fc_threshold, self.subcohort2_kd_threshold = train_calibrate_subcohort_model(self.subcohort2_model, subcohort2_x, subcohort2_x, calibration_set_size, random_state, refit)
-		# self.subcohort3_fc_threshold, self.subcohort3_kd_threshold = train_calibrate_subcohort_model(self.subcohort3_model, subcohort3_x, subcohort3_x, calibration_set_size, random_state, refit)
-		# self.subcohort4_fc_threshold, self.subcohort4_kd_threshold = train_calibrate_subcohort_model(self.subcohort4_model, subcohort4_x, subcohort4_x, calibration_set_size, random_state, refit)
-
 		# Train-calibrate each ScikitModel
-		subcohort1_model.train_calibrate(subcohort1_x, subcohort1_y, calibration_set_size, random_state, refit)
-		subcohort2_model.train_calibrate(subcohort2_x, subcohort2_y, calibration_set_size, random_state, refit)
-		subcohort3_model.train_calibrate(subcohort3_x, subcohort3_y, calibration_set_size, random_state, refit)
-		subcohort4_model.train_calibrate(subcohort4_x, subcohort4_y, calibration_set_size, random_state, refit)
+		self.subcohort1_model.train_calibrate(subcohort1_x, subcohort1_y, calibration_set_size, random_state, refit)
+		self.subcohort2_model.train_calibrate(subcohort2_x, subcohort2_y, calibration_set_size, random_state, refit)
+		self.subcohort3_model.train_calibrate(subcohort3_x, subcohort3_y, calibration_set_size, random_state, refit)
+		self.subcohort4_model.train_calibrate(subcohort4_x, subcohort4_y, calibration_set_size, random_state, refit)
 
 		self.calibrated = True
 
 		return
 
 	# # Train only (fit 4 models) -- don't calibrate
-	# def train(self, x_train, y_train):
-	# 	# TODO
-	# 	return
+	def train(self, x_train, y_train):
+		self.subcohort1_model.train()
+		self.subcohort2_model.train()
+		self.subcohort3_model.train()
+		self.subcohort4_model.train()
+		return
 
 	# Predict on x_test, return probability that each patient is KD
 	def predict_proba(self, x_test):
 		if self.calibrated == False:
 			print('WARNING: called predict_proba on subcohort model without pre-calibrating!')
 
-		subcohort1_model_preds = subcohort1_model.predict_proba(x_test)
-		subcohort2_model_preds = subcohort2_model.predict_proba(x_test)
-		subcohort3_model_preds = subcohort3_model.predict_proba(x_test)
-		subcohort4_model_preds = subcohort4_model.predict_proba(x_test)
+		subcohort1_model_preds = self.subcohort1_model.predict_proba(x_test)
+		subcohort2_model_preds = self.subcohort2_model.predict_proba(x_test)
+		subcohort3_model_preds = self.subcohort3_model.predict_proba(x_test)
+		subcohort4_model_preds = self.subcohort4_model.predict_proba(x_test)
 
 		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
 
@@ -676,9 +665,24 @@ class SubcohortModel:
 		return y_prob
 
 	# # Predict on x_test, return binary y_pred
-	# def predict(self, x_test, threshold=0.5):
-	# 	# TODO
-	# 	return
+	def predict(self, x_test, threshold=0.5):
+		subcohort1_model_preds = self.subcohort1_model.predict(x_test, threshold=threshold)
+		subcohort2_model_preds = self.subcohort2_model.predict(x_test, threshold=threshold)
+		subcohort3_model_preds = self.subcohort3_model.predict(x_test, threshold=threshold)
+		subcohort4_model_preds = self.subcohort4_model.predict(x_test, threshold=threshold)
+
+		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
+
+		# Init predictions to -1
+		y_pred = np.repeat(-1, x_test.shape[0])
+
+		# Apply predictions from each subcohort
+		y_pred[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices]
+		y_pred[subcohort2_indices] = subcohort2_model_preds[subcohort2_indices]
+		y_pred[subcohort3_indices] = subcohort3_model_preds[subcohort3_indices]
+		y_pred[subcohort4_indices] = subcohort4_model_preds[subcohort4_indices]
+
+		return y_pred
 
 	# Return numpy array with calibrated predictions: 1 for KD, 0 for FC, -1 for indeterminate
 	def predict_calibrated(self, x_test, allow_indeterminates=True):
@@ -688,10 +692,10 @@ class SubcohortModel:
 		if self.calibrated == False:
 			print('WARNING: called predict_proba on subcohort model without pre-calibrating!')
 
-		subcohort1_model_preds = subcohort1_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
-		subcohort2_model_preds = subcohort2_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
-		subcohort3_model_preds = subcohort3_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
-		subcohort4_model_preds = subcohort4_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
+		subcohort1_model_preds = self.subcohort1_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
+		subcohort2_model_preds = self.subcohort2_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
+		subcohort3_model_preds = self.subcohort3_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
+		subcohort4_model_preds = self.subcohort4_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
 
 		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
 
@@ -707,7 +711,7 @@ class SubcohortModel:
 		return y_pred
 
 	# # Train-calibrate on x_train and y_train, and predict on x_test
-	# def train_test(self, x_train, x_test, y_train, y_test):
-	# 	# TODO
-	# 	return
+	def train_test(self, x_train, x_test, y_train, y_test, calibration_set_size=0.5, random_state=90007, refit=False, allow_indeterminates=True):
+		self.train_calibrate(x_train, y_train, calibration_set_size=calibration_set_size, random_state=random_state, refit=refit)
+		return self.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
 
