@@ -230,9 +230,9 @@ def test_2stage_model(model, x, y, allow_indeterminates=True, final_threshold=0.
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
 
-		if verbose == True:
-			print('Stage 1 FC-KD thresholds: {}, {}'.format(model.stage1_fc_threshold, model.stage1_kd_threshold))
-			print('Stage 2 FC-KD thresholds: {}, {}'.format(model.stage2_fc_threshold, model.stage2_kd_threshold))
+		# if verbose == True:
+		# 	print('Stage 1 FC-KD thresholds: {}, {}'.format(model.stage1_fc_threshold, model.stage1_kd_threshold))
+		# 	print('Stage 2 FC-KD thresholds: {}, {}'.format(model.stage2_fc_threshold, model.stage2_kd_threshold))
 
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
@@ -451,6 +451,8 @@ class ScikitModel:
 
 
 # 2-stage model wrapper class
+	# stage1_model must be of type ScikitModel
+	# stage2_model must be of type ScikitModel or SubcohortModel
 class TwoStageModel:
 	def __init__(self, stage1_model, stage2_model, verbose=True):
 		self.stage1 = stage1_model
@@ -462,31 +464,17 @@ class TwoStageModel:
 		# Store thresholds in self.{stage1/stage2}_{kd/fc}_threshold
 		# If refit=True, refit stage1 and stage2 on entire train-set for inference
 	def train_calibrate(self, x_train, y_train, calibration_set_size=0.5, random_state=90007, refit=False):
-		# Split train and calibrate sets
-		x_train_calibrate, x_calibrate, y_train_calibrate, y_calibrate = train_test_split(x_train, y_train, 
-			test_size=calibration_set_size, random_state=random_state, stratify=y_train)
 
-		# Calibrate stage1
-		self.stage1.fit(x_train_calibrate, y_train_calibrate)
-		stage1_calibrate_proba = self.stage1.predict_proba(x_calibrate)[:, 1]
-		self.stage1_fc_threshold, self.stage1_kd_threshold = get_fc_kd_thresholds(stage1_calibrate_proba, y_calibrate)
-
-		# Calibrate stage2
-		self.stage2.fit(x_train_calibrate, y_train_calibrate)
-		stage2_calibrate_proba = self.stage2.predict_proba(x_calibrate)[:, 1]
-		self.stage2_fc_threshold, self.stage2_kd_threshold = get_fc_kd_thresholds(stage2_calibrate_proba, y_calibrate)
-
-		# Refit on entire train-set after calibration
-		if refit == True:
-			self.stage1.fit(x_train, y_train)
-			self.stage2.fit(x_train, y_train)
+		# Train-calibrate stage1 and stage2
+		self.stage1.train_calibrate(x_train, y_train, calibration_set_size, random_state, refit)
+		self.stage2.train_calibrate(x_train, y_train, calibration_set_size, random_state, refit)
 
 		self.calibrated = True
 
 	# Train only (fit stage1 and stage2) -- don't calibrate
 	def train(self, x_train, y_train):
-		self.stage1.fit(x_train, y_train)
-		self.stage2.fit(x_train, y_train)
+		self.stage1.train(x_train, y_train)
+		self.stage2.train(x_train, y_train)
 
 	# Predict on x_test, return probability that each patient is KD
 	def predict_proba(self, x_test):
@@ -494,8 +482,10 @@ class TwoStageModel:
 			print('WARNING: called predict_proba on 2-stage model without pre-calibrating!')
 
 		### Test ###
-		stage1_test_proba = self.stage1.predict_proba(x_test)[:, 1]
-		indeterminate_test = np.array(np.logical_and(stage1_test_proba > self.stage1_fc_threshold, stage1_test_proba < self.stage1_kd_threshold))
+		stage1_test_proba = self.stage1.predict_proba(x_test)
+		stage1_test_pred = self.stage1.predict_calibrated(x_test)
+
+		indeterminate_test = np.array(stage1_test_pred == -1) # indeterminates mask
 
 		x_indeterminate_test = x_test[indeterminate_test]
 
@@ -503,10 +493,8 @@ class TwoStageModel:
 		
 		# If there are indeterminates, use stage2 to generate stage-2 predictions
 		if x_indeterminate_test.shape[0] > 0:
-			stage2_test_proba = self.stage2.predict_proba(x_indeterminate_test)[:, 1]
-			final_indeterminate_test = np.zeros(indeterminate_test.shape, dtype=bool)
-			final_indeterminate_test[indeterminate_test] = np.array(np.logical_and(stage2_test_proba > self.stage2_fc_threshold, stage2_test_proba < self.stage2_kd_threshold))
-			final_proba[indeterminate_test] = stage2_test_proba
+			stage2_test_proba = self.stage2.predict_proba(x_test)
+			final_proba[indeterminate_test] = stage2_test_proba[indeterminate_test]
 
 		return final_proba
 
@@ -521,31 +509,15 @@ class TwoStageModel:
 		if self.calibrated == False:
 			print('WARNING: called predict_calibrated() on 2-stage model without pre-calibrating!')
 
-		# KD scores for each stage, between 0-1
-		stage1_y_prob = self.stage1.predict_proba(x_test)[:, 1] 
-		stage2_y_prob = self.stage2.predict_proba(x_test)[:, 1]
-
-		# Init all final predictions to -1 (indeterminate)
-		y_pred = np.repeat(-1, x_test.shape[0]) 
-
 		# Stage 1
-		y_pred[np.where(stage1_y_prob >= self.stage1_kd_threshold)] = 1 # KD predictions (where score >= KD threshold)
-		y_pred[np.where(stage1_y_prob <= self.stage1_fc_threshold)] = 0 # FC predictions (where score <= FC threshold)
-		stage1_indeterminate_inds = np.where(y_pred == -1)
+		stage1_preds = self.stage1.predict_calibrated(x_test)
+		y_pred = np.copy(stage1_preds)
 
-		if return_stage1 == True:
-			stage1_preds = y_pred.copy()
+		# Indeterminate mask
+		indeterminate_test = np.array(y_pred == -1)
 
-		# Stage 2
-		stage2_pred = np.repeat(-1, x_test.shape[0])
-		if allow_indeterminates == True:
-			stage2_pred[np.where(stage2_y_prob >= self.stage2_kd_threshold)] = 1 # KD predictions (where score >= KD threshold)
-			stage2_pred[np.where(stage2_y_prob <= self.stage2_fc_threshold)] = 0 # FC predictions (where score <= FC threshold)
-		else:
-			stage2_pred[np.where(stage2_y_prob >= 0.5)] = 1 # KD predictions (where score >= KD threshold)
-			stage2_pred[np.where(stage2_y_prob < 0.5)] = 0 # FC predictions (where score <= FC threshold)
-
-		y_pred[stage1_indeterminate_inds] = stage2_pred[stage1_indeterminate_inds] # Apply stage 2 predictions to stage1-indeterminates
+		# Apply stage 2 predictions
+		y_pred[indeterminate_test] = self.stage2.predict_calibrated(x_test)[indeterminate_test]
 
 		return y_pred if return_stage1 == False else (y_pred, stage1_preds)
 
