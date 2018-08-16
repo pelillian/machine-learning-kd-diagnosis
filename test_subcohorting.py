@@ -73,7 +73,7 @@ for random_state in RANDOM_STATES:
 	   'n_estimators': [300],
 	   'max_features': [1/3]
 	}
-	stage2 = SubcohortModel(ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1, scoring='roc_auc'))
+	stage2 = SubcohortModel(ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1))
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, stage2,
 					verbose=True),
@@ -91,6 +91,8 @@ for random_state in RANDOM_STATES:
 	if 'stanford_subc' not in confusions_dict:
 		confusions_dict['stanford_subc'] = []
 	confusions_dict['stanford_subc'].append(confusions)
+
+	print()
 
 
 	### Bagging Logistic Regression ###

@@ -8,10 +8,10 @@ kd_df = pd.read_excel(open('../data/KD-FC-mrg-peter-alg-expanded-trainingset-201
                         sheetname='KD expanded training set 2018')
 fc_df = pd.read_excel(open('../data/KD-FC-mrg-peter-alg-expanded-trainingset-20180315.xlsx', 'rb'), 
                         sheetname='FC expanded training set 2018')
-df = pd.concat([kd_df, fc_df])
+df = pd.concat([kd_df, fc_df], ignore_index=True)
 
 # Get inner join (features that only appear in both tables)
-df_inner = pd.concat([kd_df, fc_df], join='inner')
+df_inner = pd.concat([kd_df, fc_df], join='inner', ignore_index=True)
 
 # Only include numeric features
 df_numeric = df_inner.select_dtypes(include=[np.number])

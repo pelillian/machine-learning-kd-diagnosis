@@ -155,8 +155,8 @@ def test_model(model, x, y,
 		model.train_calibrate(x_train_all, y_train_all, calibration_set_size=calibration_set_size, random_state=random_state, refit=False) 
 		y_prob = model.predict_proba(x_test)
 
-		if verbose == True:
-			print('FC-KD Thresholds: {}, {}'.format(model.fc_threshold, model.kd_threshold))
+		# if verbose == True:
+		# 	print('FC-KD Thresholds: {}, {}'.format(model.fc_threshold, model.kd_threshold))
 
 		# Get ROC curve
 		roc = roc_curve(y_test, y_prob) # tuple (fpr, tpr, thresholds)
@@ -295,7 +295,7 @@ def plot_cv_roc_curves(roc_curves):
 class ScikitModel:
 	def __init__(self, skmodel, params={}, random_search=False, n_iter=1, scoring='roc_auc', beta=1.0, n_jobs=1, verbose=False):
 		self.skmodel = skmodel
-		self.cv_scorer = 'roc_auc' if scoring=='roc_auc' else make_scorer(fbeta_score, beta=beta)
+		self.cv_scorer = 'roc_auc' if scoring =='roc_auc' else make_scorer(fbeta_score, beta=beta)
 		self.verbose = verbose
 		self.calibrated = False
 		if random_search == True: # Randomized grid search
@@ -375,6 +375,9 @@ class ScikitModel:
 	# stage2_model must be of type ScikitModel or SubcohortModel
 class TwoStageModel:
 	def __init__(self, stage1_model, stage2_model, verbose=True):
+		assert isinstance(stage1_model, ScikitModel)
+		assert isinstance(stage2_model, ScikitModel) or isinstance(stage2_model, SubcohortModel)
+
 		self.stage1 = stage1_model
 		self.stage2 = stage2_model
 		self.verbose = verbose
@@ -450,12 +453,15 @@ class TwoStageModel:
 	# Train and calibrate 4 separate models, splitting patients into subcohorts by # clinical KD criteria
 	# Base model must be of type ScikitModel!
 class SubcohortModel:
+	subcohorting_features = ['redhands', 'rash', 'redeyes', 'redplt', 'clnode']
+
 	def __init__(self, base_model, verbose='base_model'):
+		assert isinstance(base_model, ScikitModel)
+
 		self.subcohort1_model = deepcopy(base_model) # 1 clinical criterion
 		self.subcohort2_model = deepcopy(base_model) # 2
 		self.subcohort3_model = deepcopy(base_model) # 3
 		self.subcohort4_model = deepcopy(base_model) # >= 4
-		self.subcohorting_features = ['redhands', 'rash', 'redeyes', 'redplt', 'clnode']
 
 		if verbose == 'base_model':
 			self.verbose = base_model.verbose
@@ -468,58 +474,71 @@ class SubcohortModel:
 		self.stage2_fc_threshold = ''
 
 	# Take in a DataFrame of patients, return indices of 4 subcohorts
-	def get_subcohort_indices(self, x):
+	@staticmethod
+	def get_subcohort_indices(x):
 		pd.options.mode.chained_assignment = None  # default='warn'
 
 		x['num_kd_criteria'] = 0 # new column: # KD criteria
-		for subcohorting_feature in self.subcohorting_features:
+		for subcohorting_feature in SubcohortModel.subcohorting_features:
 			x['num_kd_criteria'] += (x[subcohorting_feature] > 0).astype(int) # add 1 if feature > 0
 
 		# Get subcohorts based on num. clinical KD criteria
-		subcohort1_indices = x.index[x['num_kd_criteria'] == 1].tolist()
-		subcohort2_indices = x.index[x['num_kd_criteria'] == 2].tolist()
-		subcohort3_indices = x.index[x['num_kd_criteria'] == 3].tolist()
-		subcohort4_indices = x.index[x['num_kd_criteria'] >= 4].tolist()
+		subcohort1_indices = np.flatnonzero(x['num_kd_criteria'] == 1).tolist() # get Pandas boolean mask, and use numpy to get positional indices of True entries
+		subcohort1_indices += np.flatnonzero(x['num_kd_criteria'] == 0).tolist() # in case there are patients with 0 criteria (it looks like there's just 1)
+
+		subcohort2_indices = subcohort1_indices + np.flatnonzero(x['num_kd_criteria'] == 2).tolist() # HACKY FIX: merge subcohorts 1 and 2 for greater KD representation. TODO: find a better solution
+		subcohort3_indices = np.flatnonzero(x['num_kd_criteria'] == 3).tolist()
+		subcohort4_indices = np.flatnonzero(x['num_kd_criteria'] >= 4).tolist()
 
 		x.drop('num_kd_criteria', inplace=True, axis=1)
 
-		return subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices
+		# return subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices
+		return subcohort2_indices, subcohort3_indices, subcohort4_indices
 
 	# Take in a DataFrame of patients, split into 4 subcohorts
-	def get_subcohorts(self, x, y=None):
-		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x)
+	@staticmethod
+	def get_subcohorts(x, y=None):
+		# subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x)
+		subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x)
 
 		# print(subcohort1_indices) - TODO: debugging
 
 		# Get subcohorts based on num. clinical KD criteria
 		# print('x shape: ', x.shape)
 
-		subcohort1_x = x.iloc[subcohort1_indices]
+		# subcohort1_x = x.iloc[subcohort1_indices] # HACKY FIX
 		subcohort2_x = x.iloc[subcohort2_indices]
 		subcohort3_x = x.iloc[subcohort3_indices]
 		subcohort4_x = x.iloc[subcohort4_indices]
 
 		# Split y DataFrame as well
 		if y is not None:
-			subcohort1_y = y.iloc[subcohort1_indices]
+			# subcohort1_y = y.iloc[subcohort1_indices] # HACKY FIX
 			subcohort2_y = y.iloc[subcohort2_indices]
 			subcohort3_y = y.iloc[subcohort3_indices]
 			subcohort4_y = y.iloc[subcohort4_indices]
 
+		# if y is not None:
+		# 	return (subcohort1_x, subcohort1_y, subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y)
+		# else:
+		# 	return (subcohort1_x, subcohort2_x, subcohort3_x, subcohort4_x)
+
+		# HACKY FIX
 		if y is not None:
-			return (subcohort1_x, subcohort1_y, subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y)
+			return (subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y)
 		else:
-			return (subcohort1_x, subcohort2_x, subcohort3_x, subcohort4_x)
+			return (subcohort2_x, subcohort3_x, subcohort4_x)
 
 	# Train & Calibrate model (split train-set into cohorts, train and calibrate each  of the 4 models)
 		# Store thresholds in self.subcohort{1/2/3/4}_{kd/fc}_threshold
 		# If refit=True, refit models on entire subcohort for inference
 	def train_calibrate(self, x_train, y_train, calibration_set_size=0.5, random_state=90007, refit=False):
 		# Get subcohorts
-		subcohort1_x, subcohort1_y, subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y = self.get_subcohorts(x_train, y_train)
+		# subcohort1_x, subcohort1_y, subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y = SubcohortModel.get_subcohorts(x_train, y_train)
+		subcohort2_x, subcohort2_y, subcohort3_x, subcohort3_y, subcohort4_x, subcohort4_y = SubcohortModel.get_subcohorts(x_train, y_train)
 
 		# Train-calibrate each ScikitModel
-		self.subcohort1_model.train_calibrate(subcohort1_x, subcohort1_y, calibration_set_size, random_state, refit)
+		# self.subcohort1_model.train_calibrate(subcohort1_x, subcohort1_y, calibration_set_size, random_state, refit) # HACKY FIX
 		self.subcohort2_model.train_calibrate(subcohort2_x, subcohort2_y, calibration_set_size, random_state, refit)
 		self.subcohort3_model.train_calibrate(subcohort3_x, subcohort3_y, calibration_set_size, random_state, refit)
 		self.subcohort4_model.train_calibrate(subcohort4_x, subcohort4_y, calibration_set_size, random_state, refit)
@@ -530,7 +549,7 @@ class SubcohortModel:
 
 	# # Train only (fit 4 models) -- don't calibrate
 	def train(self, x_train, y_train):
-		self.subcohort1_model.train()
+		# self.subcohort1_model.train()
 		self.subcohort2_model.train()
 		self.subcohort3_model.train()
 		self.subcohort4_model.train()
@@ -541,18 +560,19 @@ class SubcohortModel:
 		if self.calibrated == False:
 			print('WARNING: called predict_proba on subcohort model without pre-calibrating!')
 
-		subcohort1_model_preds = self.subcohort1_model.predict_proba(x_test)
+		# subcohort1_model_preds = self.subcohort1_model.predict_proba(x_test)
 		subcohort2_model_preds = self.subcohort2_model.predict_proba(x_test)
 		subcohort3_model_preds = self.subcohort3_model.predict_proba(x_test)
 		subcohort4_model_preds = self.subcohort4_model.predict_proba(x_test)
 
-		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
+		# subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test) # HACKY FIX
+		subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test)
 
 		# Init predictions to -1
 		y_prob = np.repeat(-1, x_test.shape[0])
 
 		# Apply predictions from each subcohort
-		y_prob[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices]
+		# y_prob[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices] # HACKY FIX
 		y_prob[subcohort2_indices] = subcohort2_model_preds[subcohort2_indices]
 		y_prob[subcohort3_indices] = subcohort3_model_preds[subcohort3_indices]
 		y_prob[subcohort4_indices] = subcohort4_model_preds[subcohort4_indices]
@@ -564,18 +584,19 @@ class SubcohortModel:
 
 	# # Predict on x_test, return binary y_pred
 	def predict(self, x_test, threshold=0.5):
-		subcohort1_model_preds = self.subcohort1_model.predict(x_test, threshold=threshold)
+		# subcohort1_model_preds = self.subcohort1_model.predict(x_test, threshold=threshold)
 		subcohort2_model_preds = self.subcohort2_model.predict(x_test, threshold=threshold)
 		subcohort3_model_preds = self.subcohort3_model.predict(x_test, threshold=threshold)
 		subcohort4_model_preds = self.subcohort4_model.predict(x_test, threshold=threshold)
 
-		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
+		# subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test)
+		subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test) # HACKY FIX
 
 		# Init predictions to -1
 		y_pred = np.repeat(-1, x_test.shape[0])
 
 		# Apply predictions from each subcohort
-		y_pred[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices]
+		# y_pred[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices] # HACKY FIX
 		y_pred[subcohort2_indices] = subcohort2_model_preds[subcohort2_indices]
 		y_pred[subcohort3_indices] = subcohort3_model_preds[subcohort3_indices]
 		y_pred[subcohort4_indices] = subcohort4_model_preds[subcohort4_indices]
@@ -590,18 +611,19 @@ class SubcohortModel:
 		if self.calibrated == False:
 			print('WARNING: called predict_proba on subcohort model without pre-calibrating!')
 
-		subcohort1_model_preds = self.subcohort1_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
+		# subcohort1_model_preds = self.subcohort1_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates) # HACKY FIX
 		subcohort2_model_preds = self.subcohort2_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
 		subcohort3_model_preds = self.subcohort3_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
 		subcohort4_model_preds = self.subcohort4_model.predict_calibrated(x_test, allow_indeterminates=allow_indeterminates)
 
-		subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = self.get_subcohort_indices(x_test)
+		# subcohort1_indices, subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test)
+		subcohort2_indices, subcohort3_indices, subcohort4_indices = SubcohortModel.get_subcohort_indices(x_test) # HACKY FIX
 
 		# Init predictions to -1
 		y_pred = np.repeat(-1, x_test.shape[0])
 
 		# Apply predictions from each subcohort
-		y_pred[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices]
+		# y_pred[subcohort1_indices] = subcohort1_model_preds[subcohort1_indices] # HACKY FIX
 		y_pred[subcohort2_indices] = subcohort2_model_preds[subcohort2_indices]
 		y_pred[subcohort3_indices] = subcohort3_model_preds[subcohort3_indices]
 		y_pred[subcohort4_indices] = subcohort4_model_preds[subcohort4_indices]
