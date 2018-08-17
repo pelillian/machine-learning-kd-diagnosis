@@ -155,6 +155,21 @@ def load_expanded(one_hot=False, fill_mode='mean', standardize=True, k=5, \
 		'redhands', 'pwbc', 'ppolys', 'pbands', 'plymphs', 'pmonos',\
 		'peos', 'pesr', 'pcrp', 'pplts', 'palt', 'pggt', 'zhemo']
 		x_all = x_all[reduced_features] # update dataframe
+	# Expanded features: one-hot ethnicity (0-9)
+	else:
+		ethnicity_mappings = {
+			1: 'asian',
+			2: 'black', 
+			3: 'caucasian',
+			4: 'hispanic',
+			6: 'multiracial',
+			7: 'american_indian',
+			8: 'pacific_islander'
+		}
+		for ethnicity_val, ethnicity_name in ethnicity_mappings.items():
+			x_all['eth_{}'.format(ethnicity_name)] = (x_all['eth'] == ethnicity_val).astype(int)
+
+		x_all.drop('eth', axis=1, inplace=True)
 
 	y_all = y_all[x_all['illday'] <= 10]
 	ids_all = ids_all[x_all['illday'] <= 10]

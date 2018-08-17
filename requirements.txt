@@ -7,3 +7,4 @@ xgboost
 fancyimpute
 scikit-optimize
 imblearn
+shap

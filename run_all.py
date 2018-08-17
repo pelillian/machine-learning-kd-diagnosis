@@ -47,7 +47,7 @@ RANDOM_STATES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 90007, 2018, 525, 777, 16, 99
 N_JOBS = 1
 ALLOW_INDETERMINATES = True
 CALIBRATION_SET_SIZE = 0.5 # how much of train-set to use for risk-calibration (FC-KD thresholds)
-REDUCED_FEATURES = True
+REDUCED_FEATURES = False
 VERBOSE = True
 
 # Load expanded dataset
@@ -65,12 +65,16 @@ for random_state in RANDOM_STATES:
 	# Manually set random seed at the start, in case random_state isn't passed into functions later on
 	np.random.seed(random_state)
 
-	#### Stanford Algorithm ####
+	#### Stanford Algorithm (WITH SUBCOHORTING) ####
 	print("STANFORD KD ALGORITHM")
 	print("ABOUT TO GET DESTROYED BY USC")
 	print("#BEATtheFARM --- Fight On!")
-	stage1 = LinearDiscriminantAnalysis()
-	stage2 = RandomForestClassifier(n_estimators=300, max_features=1/3)
+	stage1 = ScikitModel(LinearDiscriminantAnalysis(), params={}, random_search=False, n_iter=1)
+	rf_params = {
+	   'n_estimators': [300],
+	   'max_features': [1/3]
+	}
+	stage2 = SubcohortModel(ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1))
 	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
 					stage1, stage2,
 					verbose=True),
@@ -88,6 +92,34 @@ for random_state in RANDOM_STATES:
 	if 'stanford' not in confusions_dict:
 		confusions_dict['stanford'] = []
 	confusions_dict['stanford'].append(confusions)
+
+	print()
+
+	#### Stanford Algorithm (WITHOUT SUBCOHORTING) ####
+	print("STANFORD KD ALGORITHM (NO SUBCOHORTING)")
+	stage1 = ScikitModel(LinearDiscriminantAnalysis(), params={}, random_search=False, n_iter=1)
+	rf_params = {
+	   'n_estimators': [300],
+	   'max_features': [1/3]
+	}
+	stage2 = ScikitModel(RandomForestClassifier(), params=rf_params, random_search=False, n_iter=1)
+	avg_rocauc, confusions = test_2stage_model(TwoStageModel(
+					stage1, stage2,
+					verbose=True),
+				x, y,
+				allow_indeterminates=ALLOW_INDETERMINATES,
+				random_state=random_state,
+				calibration_set_size=CALIBRATION_SET_SIZE,
+				return_val='roc_confusion',
+				verbose=VERBOSE)
+
+	if 'stanford_no_subcohort' not in rocaucs_dict:
+		rocaucs_dict['stanford_no_subcohort'] = []
+	rocaucs_dict['stanford_no_subcohort'].append(avg_rocauc)
+
+	if 'stanford_no_subcohort' not in confusions_dict:
+		confusions_dict['stanford_no_subcohort'] = []
+	confusions_dict['stanford_no_subcohort'].append(confusions)
 
 	print()
 
@@ -474,7 +506,7 @@ for random_state in RANDOM_STATES:
 
 	### LDA --> VOTING-ENSEMBLE 2-STAGE MODEL (0PTIMIZE FOR ROCAUC) ###
 	# Stage 1: LDA
-	stage1 = LinearDiscriminantAnalysis()
+	stage1 = ScikitModel(LinearDiscriminantAnalysis(), params={}, random_search=False, n_iter=1)
 	
 	# Stage 2: LR-SVC-XGB Voting Classifier
 	clf1 = SVC(probability=True)
@@ -501,7 +533,7 @@ for random_state in RANDOM_STATES:
 		'xgb__subsample': np.logspace(-0.3, 0, 100), # (~0.5 - 1.0)
 		'xgb__colsample_bytree': np.logspace(-0.3, 0, 100) # (~0.5 - 1.0)
 	}
-	stage2 = RandomizedSearchCV(eclf, eclf_params, cv=5, n_iter=25, scoring='roc_auc', verbose=1, n_jobs=1)
+	stage2 = ScikitModel(eclf, eclf_params, random_search=True, scoring='roc_auc', n_iter=25, verbose=True)
 
 	print('LDA + 3-WAY-VOTING-CLASSIFIER 2-STAGE ENSEMBLE (ROCAUC)')
 
