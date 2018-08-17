@@ -215,6 +215,35 @@ for random_state in RANDOM_STATES:
 
 	print()
 
+	### Random Forest ###
+	rf_params = {
+	   'n_estimators': [300],
+	   'max_features': [1/3]
+	}
+	print("RANDOM FOREST (WITH SUBCOHORTS)")
+	avg_rocauc, confusions = test_model(SubcohortModel(ScikitModel(RandomForestClassifier(), 
+						params=rf_params,
+						random_search=False,
+						n_iter=1,
+						scoring='roc_auc',
+						verbose=True)),
+					x, y,
+					allow_indeterminates=ALLOW_INDETERMINATES,
+					random_state=random_state,
+					calibration_set_size=CALIBRATION_SET_SIZE,
+					return_val='roc_confusion',
+					verbose=VERBOSE)
+
+	if 'rf_with_subcohorts' not in rocaucs_dict:
+		rocaucs_dict['rf_with_subcohorts'] = []
+	rocaucs_dict['rf_with_subcohorts'].append(avg_rocauc)
+
+	if 'rf_with_subcohorts' not in confusions_dict:
+		confusions_dict['rf_with_subcohorts'] = []
+	confusions_dict['rf_with_subcohorts'].append(confusions)
+
+	print()
+
 
 	#### XGBoost ###
 	xgb_params = {
