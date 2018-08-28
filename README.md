@@ -4,7 +4,7 @@ Kawasaki Disease (KD) is a rare heart condition that affects children all over t
 
 ### Usage Instructions:
 1. `git clone` this repository; `cd` to repository directory
-2. Create a symlink from KD-data Dropbox folder to `deep-learning-kd-diagnosis/data`
+2. Create a symlink from KD-data Dropbox folder to `deep-learning-kd-diagnosis/data` (this is confidential patient data not available to the public)
 3. Create conda environment: `conda create -n kd`; `source activate kd`
 4. Install requirements: `pip install -r requirements.txt`
 5. Run experiments: `bash run_run_all.sh`
