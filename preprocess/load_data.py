@@ -228,3 +228,40 @@ def load_test(fill_mode='mean', standardize=True, k=5, \
 		ids_all = ids_all.values
 
 	return (x_filled, ids_all)
+
+# Load Jan 2019 multisite training dataset (1925 rows)
+def load_multisite(one_hot=False, fill_mode='mean', standardize=True, k=5, \
+		return_ids=True, return_pandas=False):
+	# Load pickle dump
+	try:
+		f = open('../data/kd_dataset_multisite.pkl','rb')
+	except:
+		f = open('./data/kd_dataset_multisite.pkl','rb')
+	x_all, y_all, ids_all = pkl.load(f)
+	f.close()
+
+	# Drop patients with illday > 10
+	y_all = y_all[x_all['illday'] <= 10]
+	ids_all = ids_all[x_all['illday'] <= 10]
+	x_all = x_all[x_all['illday'] <= 10]
+
+	# Standardize
+	if fill_mode == 'knn':
+		standardize = True
+	if standardize:
+		standardize_df(x_all)
+
+	# One-hot encode y
+	if (one_hot):
+		y_all = np.eye(np.max(y_all) + 1)[y_all]
+
+	# Fill NaNs
+	x_filled = fill_nan(x_all, mode=fill_mode, k=k)
+
+	if return_pandas == False:
+		# Convert to numpy.ndarray
+		x_filled = x_filled.values
+		y_all = y_all.values
+		ids_all = ids_all.values
+
+	return (x_filled, y_all, ids_all)
