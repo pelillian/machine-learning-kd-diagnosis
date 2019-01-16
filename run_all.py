@@ -51,7 +51,8 @@ REDUCED_FEATURES = False
 VERBOSE = True
 
 # Load expanded dataset
-x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=REDUCED_FEATURES, return_pandas=True)
+# x, y, ids = load_data.load_expanded(one_hot=False, fill_mode='mean', reduced_features=REDUCED_FEATURES, return_pandas=True)
+x, y, ids = load_data.load_multisite(return_pandas=True)
 
 rocaucs_dict = {}
 confusions_dict = {}
@@ -130,7 +131,7 @@ for random_state in RANDOM_STATES:
 	if (CLASS_WEIGHT != "none"):
 		lr_params['class_weight'] = CLASS_WEIGHT # how much to weigh FC patients over KD
 	print("LOGISTIC REGRESSION")
-	avg_rocauc, confusions = test_model(ScikitModel(LogisticRegression(), 
+	avg_rocauc, confusions = test_model(ScikitModel(LogisticRegression(solver='lbfgs'), 
 					params=lr_params,
 					random_search=False,
 					scoring='roc_auc',
@@ -305,7 +306,7 @@ for random_state in RANDOM_STATES:
 		'max_features':randint(10, x.shape[1])
 	}
 	bagging_lr = BaggingClassifier(
-		base_estimator=LogisticRegression(),
+		base_estimator=LogisticRegression(solver='lbfgs'),
 		bootstrap=True,
 		bootstrap_features=False,
 		n_jobs=N_JOBS
@@ -377,7 +378,7 @@ for random_state in RANDOM_STATES:
 
 	### Voting Ensemble (OPTIMIZE FOR ACCURACY) ###
 	# clf1 = SVC(probability=True)
-	# clf2 = LogisticRegression()
+	# clf2 = LogisticRegression(solver='lbfgs')
 	# clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
 
 	# eclf = VotingClassifier(
@@ -539,7 +540,7 @@ for random_state in RANDOM_STATES:
 	
 	# Stage 2: LR-SVC-XGB Voting Classifier
 	clf1 = SVC(probability=True)
-	clf2 = LogisticRegression()
+	clf2 = LogisticRegression(solver='lbfgs')
 	clf3 = xgb.XGBClassifier(n_jobs=N_JOBS)
 	eclf = VotingClassifier(
 	    estimators=[
